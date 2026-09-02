@@ -554,6 +554,7 @@ textarea:focus {
 /* ---------- ส่วนท้าย ---------- */
 .footer { text-align: center; padding: 1.6rem 1rem 2.6rem; color: var(--ink-soft); font-size: 0.85rem; }
 .footer p { margin: 0.2rem 0; }
+.version-tag { margin-top: 0.6rem; opacity: 0.7; font-size: 0.75rem; }
 
 /* ---------- Scrollbar สีชมพู ---------- */
 ::-webkit-scrollbar { width: 10px; }

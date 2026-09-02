@@ -15,12 +15,13 @@ const DB_NAME = 'love-memory-db';
 const DB_VERSION = 1;
 const STORE_NAME = 'memories';
 const MAX_FILE_MB = 20;
-const MAX_IMAGE_WIDTH = 800;    // 🖼️ ความกว้างสูงสุดหลังย่อด้วย Canvas (พอดีความละเอียดจอมือถือ)
-const MAX_IMAGE_HEIGHT = 800;   // ความสูงสุดหลังย่อ (กันรูปแนวตั้งยาวกินหน่วยความจำ)
-const COMPRESS_QUALITY = 0.6;   // คุณภาพเริ่มต้น JPEG: canvas.toDataURL('image/jpeg', 0.6)
-const MIN_QUALITY = 0.4;        // คุณภาพต่ำสุดที่ยอม (ลดทีละขั้นถ้าไฟล์ยังใหญ่เกินเป้า)
-const TARGET_MAX_KB = 300;      // เป้าหมายขนาดไฟล์หลังบีบอัด (ช่วง 100 - 300 KB)
-const KEEP_ORIGINAL_IF_SMALLER_THAN = 300 * 1024; // ไฟล์เล็กและไม่ต้องย่อ → เก็บต้นฉบับ
+const MAX_IMAGE_WIDTH = 600;    // 🖼️ ความกว้างสูงสุดหลังย่อ (เล็กสุดเพื่อมือถือ)
+const MAX_IMAGE_HEIGHT = 600;   // ความสูงสุดหลังย่อ (กันรูปแนวตั้งยาวกินหน่วยความจำ)
+const COMPRESS_QUALITY = 0.5;   // คุณภาพเริ่มต้น JPEG: canvas.toDataURL('image/jpeg', 0.5)
+const MIN_QUALITY = 0.35;       // คุณภาพต่ำสุดที่ยอม (ลดทีละขั้นถ้าไฟล์ยังใหญ่เกินเป้า)
+const TARGET_MAX_KB = 150;      // เป้าหมายขนาดไฟล์หลังบีบอัด (ไม่กี่สิบถึงร้อยกว่า KB)
+const KEEP_ORIGINAL_IF_SMALLER_THAN = 150 * 1024; // ไฟล์เล็กและไม่ต้องย่อ → เก็บต้นฉบับ
+const APP_VERSION = '2.5.0';    // เวอร์ชันแอป (ดูที่ footer + Console เวลา debug บนมือถือ)
 const THEME_STORAGE_KEY = 'love-memory-theme';     // 🌙 จำธีมล่าสุด (เก็บในเครื่องเท่านั้น)
 const ANNIVERSARY_KEY = 'love-memory-anniversary'; // ⏳ วันแรกที่เริ่มคบกัน (เก็บในเครื่องเท่านั้น)
 const HEART_EMOJIS = ['💗', '💖', '💕', '🩷', '💞', '🌸'];
@@ -114,19 +115,33 @@ function openDatabase() {
   });
 }
 
+/** พิมพ์รายละเอียด error ของ IndexedDB ลง Console อย่างละเอียด (name/code/message) */
+function logIndexedDbError(prefix, error) {
+  console.error('❌ ' + prefix);
+  console.error('   name   :', error && error.name);
+  console.error('   code   :', error && error.code);
+  console.error('   message:', error && error.message);
+  console.error('   error  :', error);
+}
+
 /** เพิ่มความทรงจำใหม่ลงฐานข้อมูล (กัน error ทุกกรณี รวมถึงธุรกรรมค้าง) */
 function addMemoryRecord(memory) {
   return new Promise((resolve, reject) => {
     if (!db) {
-      reject(new Error('ฐานข้อมูลยังไม่พร้อม ลองรีเฟรชหน้าก่อนนะ'));
+      const err = new Error('ฐานข้อมูลยังไม่พร้อม ลองรีเฟรชหน้าก่อนนะ');
+      logIndexedDbError('บันทึกไม่สำเร็จ: ฐานข้อมูลยังไม่พร้อม', err);
+      reject(err);
       return;
     }
+
+    console.log('💾 กำลังเขียนลง IndexedDB (รูป: ' + (memory.photo ? formatBytes(memory.photo.size) : 'ไม่มี') + ')');
 
     let tx;
     try {
       tx = db.transaction(STORE_NAME, 'readwrite');
     } catch (err) {
       // เช่น InvalidStateError เมื่อการเชื่อมต่อถูกปิดไปแล้ว
+      logIndexedDbError('สร้าง transaction ไม่สำเร็จ', err);
       reject(err);
       return;
     }
@@ -135,13 +150,22 @@ function addMemoryRecord(memory) {
       tx.objectStore(STORE_NAME).add(memory);
     } catch (err) {
       // เช่น DataCloneError เมื่อข้อมูลไม่สามารถเก็บลงฐานข้อมูลได้
+      logIndexedDbError('add() ไม่สำเร็จ', err);
       reject(err);
       return;
     }
 
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error('เขียนข้อมูลลง IndexedDB ไม่สำเร็จ'));
-    tx.onabort = () => reject(tx.error || new Error('ธุรกรรม IndexedDB ถูกยกเลิก'));
+    tx.onerror = () => {
+      const error = tx.error || new Error('เขียนข้อมูลลง IndexedDB ไม่สำเร็จ');
+      logIndexedDbError('เขียนข้อมูลไม่สำเร็จ (tx.onerror)', error);
+      reject(error);
+    };
+    tx.onabort = () => {
+      const error = tx.error || new Error('ธุรกรรม IndexedDB ถูกยกเลิก');
+      logIndexedDbError('ธุรกรรมถูกยกเลิก (tx.onabort)', error);
+      reject(error);
+    };
   });
 }
 
@@ -285,35 +309,55 @@ function loadImage(src) {
 }
 
 /**
- * ย่อ + บีบอัดรูปภาพเป็น Blob ขนาดเล็ก (เหมาะกับมือถือ)
- * ขั้นตอน: FileReader → data URL → Image → Canvas ย่อไม่เกิน 800×800
- *          → toDataURL('image/jpeg', 0.6) → ลดคุณภาพทีละขั้นถ้ายังใหญ่
- * @param {File|Blob} file ไฟล์รูปที่ผู้ใช้เลือก
- * @returns {Promise<File|Blob>} Blob ที่บีบอัดแล้ว หรือไฟล์ต้นฉบับถ้าบีบอัดไม่คุ้ม/ไม่สำเร็จ
+ * บีบอัดรูปแบบมี "รถกันค้าง" — ถ้ามือถือประมวลผลนานเกิน 12 วินาที
+ * จะใช้ไฟล์ต้นฉบับทันที ไม่ทำให้ปุ่มบันทึกค้าง
  */
-async function compressImage(file) {
+function compressImage(file) {
   if (!file || !file.type || !file.type.startsWith('image/')) {
-    return file;
+    return Promise.resolve(file);
   }
 
-  // GIF ภาพเคลื่อนไหว: ผ่าน Canvas จะเหลือเฟรมเดียว → เก็บต้นฉบับไว้
   if (file.type === 'image/gif') {
-    return file;
+    // GIF ภาพเคลื่อนไหว: ผ่าน Canvas จะเหลือเฟรมเดียว → เก็บต้นฉบับไว้
+    return Promise.resolve(file);
   }
 
+  return Promise.race([
+    runCompression(file),
+    new Promise((resolve) => {
+      setTimeout(() => {
+        console.warn('⏰ บีบอัดรูปนานเกิน 12 วินาที → ใช้ไฟล์ต้นฉบับแทน');
+        resolve(file);
+      }, 12000);
+    }),
+  ]);
+}
+
+/**
+ * ย่อ + บีบอัดรูปภาพเป็น Blob ขนาดเล็กมาก (เหมาะกับมือถือ)
+ * ขั้นตอน: FileReader → data URL → Image → Canvas ย่อไม่เกิน 600×600
+ *          → toDataURL('image/jpeg', 0.5) → ลดคุณภาพทีละขั้นถ้ายังใหญ่
+ */
+async function runCompression(file) {
   try {
     // 1) อ่านไฟล์เป็น data URL ด้วย FileReader (เสถียรบนมือถือมากกว่า objectURL)
     const originalDataUrl = await blobToDataUrl(file);
 
     // 2) โหลดเป็น Image เพื่อวัดขนาดจริงของรูป
     const img = await loadImage(originalDataUrl);
+
+    // กันภาพที่ถอดรหัสไม่สมบูรณ์ (บางเบราว์เซอร์มือถือคืนค่า 0)
+    if (!img.naturalWidth || !img.naturalHeight) {
+      throw new Error('อ่านขนาดรูปภาพไม่สำเร็จ');
+    }
+
     const scale = Math.min(
       1,
       MAX_IMAGE_WIDTH / img.naturalWidth,
       MAX_IMAGE_HEIGHT / img.naturalHeight
     );
 
-    // รูปเล็กอยู่แล้วและไฟล์ไม่ใหญ่ → เก็บต้นฉบับ (คมชัดที่สุด ไม่ต้องเสียเวลาเข้ารหัส)
+    // รูปเล็กอยู่แล้วและไฟล์ไม่ใหญ่ → เก็บต้นฉบับ (คมชัดที่สุด)
     if (scale >= 1 && file.size <= KEEP_ORIGINAL_IF_SMALLER_THAN) {
       console.log('🖼️ Original size vs Compressed size: ' + formatBytes(file.size) + ' → เก็บต้นฉบับ (รูปเล็กอยู่แล้ว)');
       return file;
@@ -332,7 +376,7 @@ async function compressImage(file) {
     ctx.fillRect(0, 0, targetWidth, targetHeight);
     ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
-    // 4) เข้ารหัส JPEG คุณภาพ 0.6 แล้วลดคุณภาพทีละขั้นถ้ายังใหญ่เกินเป้า
+    // 4) เข้ารหัส JPEG คุณภาพ 0.5 แล้วลดคุณภาพทีละขั้นถ้ายังใหญ่เกินเป้า
     let quality = COMPRESS_QUALITY;
     let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
     if (typeof compressedDataUrl !== 'string' || compressedDataUrl.indexOf('data:image/jpeg') !== 0) {
@@ -356,7 +400,7 @@ async function compressImage(file) {
     // ใช้ผลลัพธ์เฉพาะเมื่อเล็กกว่าไฟล์ต้นฉบับจริง ไม่งั้นเก็บต้นฉบับ
     return blob.size > 0 && blob.size < file.size ? blob : file;
   } catch (err) {
-    console.warn('บีบอัดรูปไม่สำเร็จ ใช้ไฟล์ต้นฉบับแทน:', err);
+    console.warn('บีบอัดรูปไม่สำเร็จ ใช้ไฟล์ต้นฉบับแทน:', err && err.name, '-', err && err.message);
     return file;
   }
 }
@@ -377,8 +421,12 @@ async function handleSave(event) {
 
   els.saveBtn.disabled = true;
   els.saveBtn.textContent = '⏳ กำลังบีบอัด & บันทึก...';
+
+  let savedOk = false;
+
+  // 💾 ขั้นตอนบีบอัด + เขียนลง IndexedDB — try/catch ครอบครั้ง
   try {
-    // 🖼️ ย่อ + บีบอัดรูปก่อนเซฟ ลดขนาดไฟล์ กัน Quota Error บนมือถือ
+    // 🖼️ รอบีบอัดรูปให้เสร็จก่อนเขียนลงฐานข้อมูลเสมอ (async/await)
     const photo = pendingFile ? await compressImage(pendingFile) : null;
 
     const memory = {
@@ -387,12 +435,19 @@ async function handleSave(event) {
       photo: photo || null, // เก็บเป็น Blob ขนาดเล็กลงเครื่องโดยตรง
       createdAt: Date.now(),
     };
-    await addMemoryRecord(memory);
+
+    await addMemoryRecord(memory); // เขียน + commit transaction
+    savedOk = true;
+
     clearForm();
-    await renderGallery();
     showToast('บันทึกความทรงจำแล้ว 💖');
   } catch (err) {
-    console.error('บันทึกไม่สำเร็จ:', err);
+    // 🔍 แจ้ง error ที่เฉพาะเจาะจงลง Console เพื่อวิเคราะห์บนมือถือ
+    console.error('❌ บันทึกลง IndexedDB ไม่สำเร็จ');
+    console.error('   name   :', err && err.name);
+    console.error('   message:', err && err.message);
+    console.error('   error  :', err);
+
     const errorName = err && err.name;
     if (errorName === 'QuotaExceededError' || errorName === 'NS_ERROR_DOM_QUOTA_REACHED') {
       showToast('พื้นที่จัดเก็บเต็มแล้ว 🥺 ลองลบความทรงจำเก่าบางส่วนก่อนนะ', 5000);
@@ -406,6 +461,17 @@ async function handleSave(event) {
   } finally {
     els.saveBtn.disabled = false;
     els.saveBtn.textContent = '💖 บันทึกความทรงจำ';
+  }
+
+  // 🌟 รีเฟรชแกลเลอรี "หลัง" บันทึกสำเร็จเท่านั้น และแยก try/catch
+  //    กันกรณี render พังบนมือถือแล้วขึ้นว่า "บันทึกไม่สำเร็จ"
+  //    ทั้งที่ข้อมูลถูกบันทึกลง IndexedDB เรียบร้อยแล้ว
+  if (savedOk) {
+    try {
+      await renderGallery();
+    } catch (err) {
+      console.error('รีเฟรชแกลเลอรีไม่สำเร็จ (แต่ข้อมูลถูกบันทึกแล้ว):', err && err.name, '-', err && err.message);
+    }
   }
 }
 
