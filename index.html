@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="description" content="เว็บเก็บความทรงจำส่วนตัว — บันทึกทุกอย่างไว้ในเครื่องของคุณเท่านั้น (Privacy-First)" />
+  <title>💕 ความทรงจำของเรา — เก็บทุกช่วงเวลาสุดน่ารัก</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>💗</text></svg>" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- 🌸 ฉากหลัง: หัวใจลอยขึ้น (สร้างโดย app.js และแอนิเมตด้วย style.css) -->
+  <div class="hearts-bg" id="heartsBg" aria-hidden="true"></div>
+
+  <!-- ===== ส่วนหัว ===== -->
+  <header class="header">
+    <h1 class="title">💕 ความทรงจำของเรา 💕</h1>
+    <p class="subtitle">เก็บทุกช่วงเวลาสุดน่ารักไว้ในที่ส่วนตัวของคุณเอง</p>
+    <p class="privacy-badge">🔒 ข้อมูลถูกบันทึกในเครื่องของคุณเท่านั้น ปลอดภัย 100%</p>
+  </header>
+
+  <main class="container">
+    <!-- ===== ฟอร์มอัปโหลดรูป + บันทึกข้อความ ===== -->
+    <section class="upload-card" aria-labelledby="uploadTitle">
+      <h2 id="uploadTitle">📸 เพิ่มความทรงจำใหม่</h2>
+
+      <form id="memoryForm" novalidate>
+        <label class="drop-zone" id="dropZone" for="photoInput">
+          <input type="file" id="photoInput" accept="image/*" hidden />
+          <span class="drop-zone-icon" id="dropIcon">🖼️</span>
+          <span class="drop-zone-text" id="dropText">แตะเพื่อเลือกรูปภาพ</span>
+          <span class="drop-zone-hint" id="dropHint">หรือลากรูปมาวางที่นี่ (JPG, PNG, GIF, WEBP)</span>
+        </label>
+
+        <div class="preview-wrap hidden" id="previewWrap">
+          <img id="previewImg" alt="ตัวอย่างรูปภาพที่เลือก" />
+          <button type="button" class="btn-remove-preview" id="removePreview">✕ เอารูปนี้ออก</button>
+        </div>
+
+        <label class="field-label" for="memoryText">
+          ✍️ บันทึกข้อความความทรงจำ <small>(ใส่หรือไม่ใส่ก็ได้นะ)</small>
+        </label>
+        <textarea id="memoryText" rows="3" maxlength="500"
+          placeholder="เล่าเรื่องน่ารักๆ ของวันนี้... เช่น วันนี้เราไปกินไอศกรีมด้วยกัน 🍦"></textarea>
+
+        <button type="submit" class="btn-primary" id="saveBtn">💖 บันทึกความทรงจำ</button>
+      </form>
+    </section>
+
+    <!-- ===== แกลเลอรีแบบไทม์ไลน์ (การ์ดโพลารอยด์สลับซ้าย-ขวา) ===== -->
+    <section class="gallery-section" aria-labelledby="galleryTitle">
+      <h2 id="galleryTitle">🌟 ความทรงจำของเรา <span class="count-pill" id="memoryCount"></span></h2>
+
+      <ol class="timeline" id="gallery"></ol>
+
+      <div class="empty-state" id="emptyState">
+        <span class="empty-icon">🌷</span>
+        <p>ยังไม่มีความทรงจำเลยน้า<br />เริ่มเก็บช่วงเวลาแรกของเรากันเถอะ!</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== ส่วนท้าย ===== -->
+  <footer class="footer">
+    <p>🔒 เว็บนี้ไม่ส่งข้อมูลออกไปยังเซิร์ฟเวอร์ใดๆ ทั้งสิ้น — บันทึกด้วย IndexedDB ในเบราว์เซอร์ของคุณเอง</p>
+    <p id="storageInfo">💾 กำลังตรวจสอบพื้นที่จัดเก็บ...</p>
+  </footer>
+
+  <!-- ===== ป็อปอัปยืนยันการลบ ===== -->
+  <div class="modal-overlay hidden" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+    <div class="modal">
+      <h3 id="deleteModalTitle">ลบความทรงจำนี้?</h3>
+      <p>รูปภาพและข้อความจะถูกลบถาวร และกู้คืนกลับมาไม่ได้นะ 🥺</p>
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" id="cancelDelete">ยกเลิก</button>
+        <button type="button" class="btn-danger" id="confirmDelete">ลบเลย</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ข้อความแจ้งเตือน ===== -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <noscript>
+    <p style="text-align:center">กรุณาเปิดใช้งาน JavaScript เพื่อบันทึกความทรงจำไว้ในเครื่องของคุณ</p>
+  </noscript>
+
+  <script src="app.js"></script>
+</body>
+</html>
