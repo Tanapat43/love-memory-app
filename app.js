@@ -22,7 +22,7 @@ const MIN_DIMENSION = 60;       // ขนาดเล็กสุดที่ย
 const MAX_RESIZE_ATTEMPTS = 8;  // จำนวนรอบสูงสุดของการย่อซ้ำแบบ recursive
 const MAX_DATAURL_CHARS = 200 * 1024; // ความยาว string data URL ไม่เกิน ~200KB
 const KEEP_ORIGINAL_IF_SMALLER_THAN = 100 * 1024; // ไฟล์เล็กและไม่ต้องย่อ → เก็บต้นฉบับ
-const APP_VERSION = '3.0.0';    // เวอร์ชันแอป (ดูที่ footer + Console เวลา debug บนมือถือ)
+const APP_VERSION = '3.1.0';    // เวอร์ชันแอป (ดูที่ footer + Console เวลา debug บนมือถือ)
 const LOCAL_MEMORIES_KEY = 'love-memory-local-memories'; // 🧯 ที่เก็บสำรองเมื่อ IndexedDB ใช้ไม่ได้
 
 /* ---------- ☁️ Firebase — คลาวด์ส่วนตัวของเจ้าของแอป ----------
@@ -91,7 +91,6 @@ let pendingDeleteId = null;       // รายการที่รอยืน�
 let pendingDeleteStorage = 'indexeddb'; // แหล่งจัดเก็บของรายการที่รอลบ (cloud/indexeddb/localstorage)
 let auth = null;                  // Firebase Auth
 let firestore = null;             // Cloud Firestore
-let storage = null;               // Firebase Storage
 let currentUser = null;           // ผู้ใช้ที่ล็อกอินอยู่
 let cloudMemories = [];           // ความทรงจำที่โหลดจาก Firestore
 let authMode = 'login';           // โหมดหน้าล็อกอิน (login/register)
@@ -590,21 +589,21 @@ async function handleSave(event) {
     };
 
     if (currentUser && firestore) {
-      // ☁️ โหมดล็อกอิน: อัปโหลดรูปขึ้น Storage → บันทึกข้อความ/วันที่/URL ลง Firestore
-      let photoUrl = null;
+      // ☁️ โหมดล็อกอิน: รูป (Canvas บีบอัด) → Base64 → บันทึกลง Firestore โดยตรง
+      let photoBase64 = null;
       if (photo instanceof Blob) {
-        photoUrl = await uploadPhotoToStorage(currentUser.uid, memory.id, photo);
+        photoBase64 = await blobToDataUrl(photo);
       }
 
       await saveMemoryToFirestore(currentUser.uid, {
         id: memory.id,
         text: memory.text,
         createdAt: memory.createdAt,
-        photoUrl: photoUrl,
+        photoBase64: photoBase64,
       });
 
       // แคชลงเครื่องด้วย (เปิดดูออฟไลน์ได้) — ใช้ put กัน id ซ้ำ
-      await putMemoryRecord(Object.assign({}, memory, { photoUrl: photoUrl, synced: true }));
+      await putMemoryRecord(Object.assign({}, memory, { photoBase64: photoBase64, synced: true }));
 
       savedOk = true;
       clearForm();
@@ -823,18 +822,8 @@ async function handleConfirmDelete() {
 
   try {
     if (storage === 'cloud' && currentUser && firestore) {
-      // ☁️ ลบจาก Firestore + ลบไฟล์รูปใน Storage (แบบเก็บงาน — ลบไฟล์ไม่ได้ก็ข้าม)
+      // ☁️ ลบเอกสารจาก Firestore (รูปฝังเป็น Base64 อยู่ใน doc จึงหายพร้อมกัน)
       await firestore.collection('users').doc(currentUser.uid).collection('memories').doc(id).delete();
-
-      const target = cloudMemories.find((m) => m.id === id);
-      if (target && target.photoUrl) {
-        try {
-          await storage.refFromURL(target.photoUrl).delete();
-        } catch (photoErr) {
-          console.warn('ลบไฟล์รูปใน Storage ไม่สำเร็จ (ข้ามได้):', photoErr && photoErr.code);
-        }
-      }
-
       cloudMemories = cloudMemories.filter((m) => m.id !== id);
     } else if (storage === 'localstorage') {
       deleteLocalMemory(id); // ลบจากที่เก็บสำรอง
@@ -1235,7 +1224,6 @@ function initFirebase() {
     firebase.initializeApp(firebaseConfig);
     auth = firebase.auth();
     firestore = firebase.firestore();
-    storage = firebase.storage();
     return true;
   } catch (err) {
     console.error('ตั้งค่า Firebase ไม่สำเร็จ:', err);
@@ -1342,33 +1330,32 @@ async function handleLogout() {
 }
 
 /* =========================================================
-   ส่วนที่ 9.9: คลาวด์ — Firestore + Storage (แยกตาม uid)
+   ส่วนที่ 9.9: คลาวด์ — Firestore ล้วน (แยกตาม uid)
    ---------------------------------------------------------
-   • รูป → Firebase Storage: users/{uid}/{memoryId}.jpg
-   • ข้อความ/วันที่/URL รูป → Firestore: users/{uid}/memories/{id}
+   • บันทึกข้อความ + วันที่ + รูป (Canvas บีบอัด → Base64)
+     ลง Firestore โดยตรง: users/{uid}/memories/{id}
+   • ขนาด doc ต้องไม่เกิน 1MB — รูปหลังบีบอัดจะเล็กแค่หลักหมื่น
+     ถึงแสน chars จึงปลอดภัย (มี guard กันเกินด้วย)
    • ล็อกอินเครื่องไหนก็ได้ ข้อมูลตามไปทุกที่อัตโนมัติ ☁️
    ========================================================= */
 
-/** อัปโหลดรูป (Blob ที่บีบอัดแล้ว) ขึ้น Firebase Storage แล้วคืน URL */
-async function uploadPhotoToStorage(uid, memoryId, blob) {
-  const photoRef = storage.ref('users/' + uid + '/' + memoryId + '.jpg');
-  const snapshot = await photoRef.put(blob, { contentType: 'image/jpeg' });
-  return await snapshot.ref.getDownloadURL();
-}
+const MAX_PHOTO_BASE64_CHARS = 900 * 1024; // ประมาณการใช้พื้นที่ doc (จำกัด doc ไม่เกิน 1MB)
 
-/** อัปโหลดรูปจาก data URL (ความทรงจำเก่าในเครื่อง) ขึ้น Storage */
-async function uploadDataUrlToStorage(uid, memoryId, dataUrl) {
-  const blob = await dataUrlToBlob(dataUrl);
-  return await uploadPhotoToStorage(uid, memoryId, blob);
-}
-
-/** บันทึกข้อความ/วันที่/URL รูปลง Firestore (ใช้ memory id เป็น doc id → ซ้ำไม่ซ้อน) */
+/** บันทึกข้อความ/วันที่/รูป Base64 ลง Firestore (ใช้ memory id เป็น doc id → ซ้ำไม่ซ้อน) */
 async function saveMemoryToFirestore(uid, memory) {
+  let photoBase64 = memory.photoBase64 || null;
+
+  // กัน doc เกิน 1MB: ถ้ารูปใหญ่ผิดปกติ ให้เซฟเฉพาะข้อความ + แจ้งใน Console
+  if (photoBase64 && photoBase64.length > MAX_PHOTO_BASE64_CHARS) {
+    console.warn('⚠️ รูปใหญ่เกินที่ Firestore รับได้ (' + formatBytes(photoBase64.length) + ') → บันทึกเฉพาะข้อความ');
+    photoBase64 = null;
+  }
+
   const docRef = firestore.collection('users').doc(uid).collection('memories').doc(memory.id);
   await docRef.set({
     text: memory.text || '',
     createdAt: memory.createdAt,
-    photoUrl: memory.photoUrl || null,
+    photoBase64: photoBase64,
     updatedAt: Date.now(),
   });
 }
@@ -1384,7 +1371,11 @@ async function loadCloudMemories(uid) {
       .orderBy('createdAt', 'desc')
       .get();
 
-    cloudMemories = snapshot.docs.map((docSnap) => Object.assign({ id: docSnap.id }, docSnap.data()));
+    cloudMemories = snapshot.docs.map((docSnap) => {
+      const data = docSnap.data();
+      // แปลง photoBase64 → photo ให้การ์ดใช้แสดงผลได้ทันที
+      return Object.assign({ id: docSnap.id, photo: data.photoBase64 || null }, data);
+    });
     console.log('☁️ โหลดจากคลาวด์ได้ ' + cloudMemories.length + ' รายการ');
   } catch (err) {
     console.error('โหลดจาก Firestore ไม่สำเร็จ:', err && err.code, '-', err && err.message);
@@ -1427,10 +1418,10 @@ function putMemoryRecord(memory) {
 }
 
 /** ทำเครื่องหมายว่ารายการในเครื่องถูกซิงก์ขึ้นคลาวด์แล้ว (กันซิงก์ซ้ำ) */
-async function markLocalMemorySynced(memory, photoUrl) {
+async function markLocalMemorySynced(memory, photoBase64) {
   if (memory._storage === 'localstorage') {
     const list = getLocalMemories().map((m) => (
-      m.id === memory.id ? Object.assign({}, m, { synced: true, photoUrl: photoUrl || null }) : m
+      m.id === memory.id ? Object.assign({}, m, { synced: true, photoBase64: photoBase64 || null }) : m
     ));
     try {
       localStorage.setItem(LOCAL_MEMORIES_KEY, JSON.stringify(list));
@@ -1440,9 +1431,9 @@ async function markLocalMemorySynced(memory, photoUrl) {
     return;
   }
 
-  // แบบ IndexedDB: เก็บไฟล์รูปเดิมไว้ดูออฟไลน์ แต่ใส่ photoUrl + synced กันซิงก์ซ้ำ
+  // แบบ IndexedDB: เก็บไฟล์รูปเดิมไว้ดูออฟไลน์ แต่ใส่ photoBase64 + synced กันซิงก์ซ้ำ
   try {
-    await putMemoryRecord(Object.assign({}, memory, { synced: true, photoUrl: photoUrl || null }));
+    await putMemoryRecord(Object.assign({}, memory, { synced: true, photoBase64: photoBase64 || null }));
   } catch (err) {
     console.warn('จดสถานะซิงก์ (IndexedDB) ไม่สำเร็จ:', err && err.message);
   }
@@ -1466,22 +1457,22 @@ async function migrateLocalToCloud(uid) {
 
     for (const memory of pending) {
       try {
-        let photoUrl = memory.photoUrl || null;
-
-        if (!photoUrl && memory.photo instanceof Blob) {
-          photoUrl = await uploadPhotoToStorage(uid, memory.id, memory.photo);
-        } else if (!photoUrl && typeof memory.photo === 'string' && memory.photo.indexOf('data:image/') === 0) {
-          photoUrl = await uploadDataUrlToStorage(uid, memory.id, memory.photo);
+        // แปลงรูป (Blob หรือ data URL) เป็น Base64 สำหรับฝังลง Firestore
+        let photoBase64 = memory.photoBase64 || null;
+        if (!photoBase64 && memory.photo instanceof Blob) {
+          photoBase64 = await blobToDataUrl(memory.photo);
+        } else if (!photoBase64 && typeof memory.photo === 'string' && memory.photo.indexOf('data:image/') === 0) {
+          photoBase64 = memory.photo;
         }
 
         await saveMemoryToFirestore(uid, {
           id: memory.id,
           text: memory.text,
           createdAt: memory.createdAt,
-          photoUrl: photoUrl,
+          photoBase64: photoBase64,
         });
 
-        await markLocalMemorySynced(memory, photoUrl);
+        await markLocalMemorySynced(memory, photoBase64);
         uploaded += 1;
       } catch (err) {
         console.warn('☁️ ซิงกรายการไม่สำเร็จ (จะลองใหม่เมื่อเปิดหน้าถัดไป):', memory.id, err && err.message);
