@@ -27,7 +27,8 @@ const LOCAL_MEMORIES_KEY = 'love-memory-local-memories'; // 🧯 ที่เก
 
 /* ---------- ☁️ Firebase — คลาวด์ส่วนตัวของเจ้าของแอป ----------
    • เก็บในโปรเจกต์ Firebase ของคุณเอง (แยกข้อมูลตาม uid ของผู้ใช้)
-   • ไม่เปิดใช้ Analytics เพื่อคงความเป็นส่วนตัวสูงสุด */
+   • ไม่เปิดใช้ Analytics เพื่อคงความเป็นส่วนตัวสูงสุด
+   • ดูขั้นตอนตั้งค่า Firebase Console ท้ายไฟล์นี้ */
 const firebaseConfig = {
   apiKey: "AIzaSyB7QGH2CactwM13JITwYOoCmEjfe68WhL4",
   authDomain: "love-memory-app-3b789.firebaseapp.com",
@@ -1221,12 +1222,18 @@ function initFirebase() {
       console.error('โหลด Firebase SDK ไม่สำเร็จ (อาจออฟไลน์หรือถูกบล็อก)');
       return false;
     }
+    // ดีบัก: แสดง key ที่ใช้จริง (เทียบกับ Firebase Console ได้)
+    console.log('🔑 Firebase API Key ที่ใช้:', firebaseConfig.apiKey);
+    console.log('🔑 Firebase Project ID:', firebaseConfig.projectId);
+    console.log('🔑 Firebase App ID:', firebaseConfig.appId);
     firebase.initializeApp(firebaseConfig);
     auth = firebase.auth();
     firestore = firebase.firestore();
+    console.log('✅ Firebase เริ่มต้นสำเร็จ');
     return true;
   } catch (err) {
-    console.error('ตั้งค่า Firebase ไม่สำเร็จ:', err);
+    console.error('❌ ตั้งค่า Firebase ไม่สำเร็จ:', err);
+    console.error('   ตรวจสอบว่า API Key ใน Firebase Console ตรงกับในโค้ด');
     return false;
   }
 }
@@ -1532,5 +1539,35 @@ if (document.readyState === 'loading') {
 } else {
   init();
 }
+
+/* ============================================================
+   🔧 ขั้นตอนตั้งค่า Firebase Console (ทำครั้งเดียว — ไม่งั้น error api-key-not-valid)
+   ============================================================
+   1. ไป https://console.firebase.google.com → เลือกโปรเจกต์ love-memory-app-3b789
+   2. ⚙️ Project settings → General → เช็ค "Web API Key" ว่าตรงกับ AIzaSyB7QGH2CactwM13JITwYOoCmEjfe68WhL4
+      → ถ้าไม่ตรง: คัดลอก key จากนี่ → ไปแทนในบรรทัด 32 ของไฟล์นี้ → commit/push ใหม่
+   3. Authentication (เมนูซ้าย) → Get started → แท็บ Sign-in method → Email/Password → Enable → Save
+   4. Authentication → Settings → Authorized domains → Add domain → ใส่ tanapat43.github.io → Add
+   5. Firestore Database (เมนูซ้าย) → Create database → Production mode → เลือก region → แท็บ Rules:
+      rules_version = '2';
+      service cloud.firestore {
+        match /databases/{database}/documents {
+          match /users/{uid}/{document=**} {
+            allow read, write: if request.auth != null && request.auth.uid == uid;
+          }
+        }
+      }
+      → กด Publish
+   6. เปิด Identity Toolkit API:
+      https://console.cloud.google.com/apis/library/identitytoolkit.googleapis.com?project=love-memory-app-3b789
+      → กด Enable (ถ้าขึ้นว่า "API enabled" แล้ว = ข้ามได้)
+   7. (สำคัญมาก) เช็ค API Key restrictions:
+      https://console.cloud.google.com/apis/credentials?project=love-memory-app-3b789
+      → คลิก API key ที่ใช้ (Browser key หรือชื่ออื่น)
+      → Application restrictions: เลือก None (หรือถ้า HTTP referrer ใส่ *.github.io/* และ */localhost/*)
+      → API restrictions: เลือก "Don't restrict key" หรือติ๊ก "Identity Toolkit API"
+      → Save
+   ลองทดสอบ → ถ้ายัง error → ลองสร้าง API key ใหม่ใน Google Cloud → นำมาแทนในบรรทัด 32 → commit/push
+   ============================================================ */
 
 
