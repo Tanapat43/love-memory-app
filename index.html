@@ -15,10 +15,27 @@
   <!-- 🌸 ฉากหลัง: หัวใจลอยขึ้น (สร้างโดย app.js และแอนิเมตด้วย style.css) -->
   <div class="hearts-bg" id="heartsBg" aria-hidden="true"></div>
 
+  <!-- 🌙 ปุ่มสลับโหมดกลางคืน/กลางวัน -->
+  <button type="button" class="theme-toggle" id="themeToggle" aria-label="สลับไปโหมดกลางคืน" title="สลับธีม">🌙</button>
+
   <!-- ===== ส่วนหัว ===== -->
   <header class="header">
     <h1 class="title">💕 ความทรงจำของเรา 💕</h1>
     <p class="subtitle">เก็บทุกช่วงเวลาสุดน่ารักไว้ในที่ส่วนตัวของคุณเอง</p>
+
+    <!-- ⏳ นับจำนวนวันที่คบกัน -->
+    <section class="days-counter" aria-label="นับจำนวนวันที่คบกัน">
+      <div class="days-card">
+        <p class="days-emoji" aria-hidden="true">💕</p>
+        <p class="days-text" id="daysText">ตั้งวันแรกที่เริ่มคบกันด้านล่าง
+แล้วเดี๋ยวเราช่วยนับวันให้นะ 💕</p>
+        <div class="days-controls">
+          <input type="date" id="anniversaryInput" class="days-input" aria-label="วันแรกที่เริ่มคบกัน" />
+          <button type="button" id="clearAnniversary" class="btn-clear-days" hidden>ล้าง</button>
+        </div>
+      </div>
+    </section>
+
     <p class="privacy-badge">🔒 ข้อมูลถูกบันทึกในเครื่องของคุณเท่านั้น ปลอดภัย 100%</p>
   </header>
 
@@ -50,6 +67,17 @@
 
         <button type="submit" class="btn-primary" id="saveBtn">💖 บันทึกความทรงจำ</button>
       </form>
+    </section>
+
+    <!-- ===== สำรอง / กู้คืนข้อมูล ===== -->
+    <section class="backup-card" aria-labelledby="backupTitle">
+      <h2 id="backupTitle">🧰 สำรองข้อมูลของเรา</h2>
+      <p class="backup-desc">ดาวน์โหลดความทรงจำทั้งหมด (รูป + ข้อความ) เป็นไฟล์ JSON เก็บไว้เอง หรือนำกลับมาใช้เมื่อเปลี่ยนเครื่อง/มือถือ — ไฟล์อยู่กับคุณเท่านั้น 🔒</p>
+      <div class="backup-actions">
+        <button type="button" id="exportBtn" class="btn-soft">📥 Export เป็นไฟล์ JSON</button>
+        <label class="btn-soft" for="importInput">📤 Import จากไฟล์ JSON</label>
+        <input type="file" id="importInput" accept="application/json,.json" hidden />
+      </div>
     </section>
 
     <!-- ===== แกลเลอรีแบบไทม์ไลน์ (การ์ดโพลารอยด์สลับซ้าย-ขวา) ===== -->

@@ -18,6 +18,8 @@ const MAX_FILE_MB = 20;
 const MAX_IMAGE_WIDTH = 1200;   // 🖼️ ความกว้างสูงสุดหลังย่อด้วย Canvas (px)
 const COMPRESS_QUALITY = 0.75;  // คุณภาพภาพ WEBP/JPEG (ช่วง 0.7 - 0.8)
 const KEEP_ORIGINAL_IF_SMALLER_THAN = 300 * 1024; // ไฟล์เล็กและไม่ต้องย่อ → เก็บต้นฉบับ
+const THEME_STORAGE_KEY = 'love-memory-theme';     // 🌙 จำธีมล่าสุด (เก็บในเครื่องเท่านั้น)
+const ANNIVERSARY_KEY = 'love-memory-anniversary'; // ⏳ วันแรกที่เริ่มคบกัน (เก็บในเครื่องเท่านั้น)
 const HEART_EMOJIS = ['💗', '💖', '💕', '🩷', '💞', '🌸'];
 const HEART_COUNT = 16;
 
@@ -44,6 +46,12 @@ const els = {
   cancelDelete: document.getElementById('cancelDelete'),
   confirmDelete: document.getElementById('confirmDelete'),
   storageInfo: document.getElementById('storageInfo'),
+  themeToggle: document.getElementById('themeToggle'),
+  daysText: document.getElementById('daysText'),
+  anniversaryInput: document.getElementById('anniversaryInput'),
+  clearAnniversary: document.getElementById('clearAnniversary'),
+  exportBtn: document.getElementById('exportBtn'),
+  importInput: document.getElementById('importInput'),
 };
 
 /* ---------- สถานะของแอป ---------- */
@@ -635,6 +643,254 @@ function bindEvents() {
       closeDeleteModal();
     }
   });
+
+  // 🌙 สลับธีมกลางคืน/กลางวัน
+  els.themeToggle.addEventListener('click', toggleTheme);
+
+  // ⏳ นับจำนวนวันที่คบกัน
+  els.anniversaryInput.addEventListener('change', handleAnniversaryChange);
+  els.clearAnniversary.addEventListener('click', handleAnniversaryClear);
+
+  // 🧰 สำรอง / กู้คืนข้อมูล
+  els.exportBtn.addEventListener('click', exportData);
+  els.importInput.addEventListener('change', (event) => {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = '';
+    importData(file);
+  });
+}
+
+/* =========================================================
+   ส่วนที่ 9.5: Dark Mode (โหมดกลางคืน)
+   • สลับคลาส dark-mode บน <html> → ตัวแปรสีทั้งชุดเปลี่ยนตาม
+   • จำธีมล่าสุดใน LocalStorage (เก็บในเครื่องเท่านั้น)
+   • ถ้ายังไม่เคยเลือก ใช้ตามค่าตั้ง prefers-color-scheme ของระบบ
+   ========================================================= */
+
+function applyTheme(theme) {
+  const isDark = theme === 'dark';
+  document.documentElement.classList.toggle('dark-mode', isDark);
+  els.themeToggle.textContent = isDark ? '☀️' : '🌙';
+  els.themeToggle.setAttribute('aria-label', isDark ? 'สลับไปโหมดกลางวัน' : 'สลับไปโหมดกลางคืน');
+}
+
+function getSavedTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if (saved === 'dark' || saved === 'light') return saved;
+  } catch {
+    /* LocalStorage ใช้ไม่ได้ → ข้ามไปใช้ค่าของระบบ */
+  }
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function setupTheme() {
+  applyTheme(getSavedTheme());
+}
+
+function toggleTheme() {
+  const next = document.documentElement.classList.contains('dark-mode') ? 'light' : 'dark';
+  applyTheme(next);
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, next);
+  } catch {
+    /* ข้าม — แค่ไม่จำค่า */
+  }
+}
+
+/* =========================================================
+   ส่วนที่ 9.6: นับจำนวนวันที่คบกัน (Days Together Counter)
+   • เก็บ "วันแรกที่เริ่มคบกัน" ใน LocalStorage
+   • คำนวณจำนวนวันแบบเทียบวันที่แบบเวลา 00:00 กันพอดี
+   ========================================================= */
+
+function getAnniversary() {
+  try {
+    return localStorage.getItem(ANNIVERSARY_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function renderDaysCounter() {
+  const stored = getAnniversary();
+  els.anniversaryInput.value = stored || '';
+  els.clearAnniversary.hidden = !stored;
+
+  if (!stored) {
+    els.daysText.textContent = 'ตั้งวันแรกที่เริ่มคบกันด้านล่าง\nแล้วเดี๋ยวเราช่วยนับวันให้นะ 💕';
+    return;
+  }
+
+  const parts = stored.split('-').map(Number);
+  const start = new Date(parts[0], parts[1] - 1, parts[2]);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const diffDays = Math.floor((today - start) / 86400000);
+
+  if (Number.isNaN(diffDays)) {
+    els.daysText.textContent = 'วันที่ไม่ถูกต้อง ลองเลือกใหม่นะ 🥺';
+  } else if (diffDays < 0) {
+    els.daysText.textContent = 'วันแรกยังอยู่ข้างหน้า ตั้งใจรอวันนั้นนะ 💫';
+  } else if (diffDays === 0) {
+    els.daysText.textContent = 'วันนี้คือวันแรกของเรา! ยินดีด้วยนะ 🎉';
+  } else {
+    els.daysText.textContent = 'เราคบกันมาแล้ว ' + diffDays.toLocaleString('th-TH') + ' วัน 💕';
+  }
+}
+
+function handleAnniversaryChange() {
+  const value = els.anniversaryInput.value;
+  try {
+    if (value) {
+      localStorage.setItem(ANNIVERSARY_KEY, value);
+      showToast('บันทึกวันแรกไว้แล้ว 🎀');
+    } else {
+      localStorage.removeItem(ANNIVERSARY_KEY);
+    }
+  } catch {
+    /* ข้าม — แค่ไม่จำค่า */
+  }
+  renderDaysCounter();
+}
+
+function handleAnniversaryClear() {
+  try {
+    localStorage.removeItem(ANNIVERSARY_KEY);
+  } catch {
+    /* ข้าม */
+  }
+  renderDaysCounter();
+  showToast('ล้างวันครบรอบแล้ว 🌷');
+}
+
+/* =========================================================
+   ส่วนที่ 9.7: สำรอง / กู้คืนข้อมูล (Export & Import JSON)
+   ---------------------------------------------------------
+   • Export: อ่านจาก IndexedDB → ฝังรูปเป็น base64 → ดาวน์โหลดไฟล์
+   • Import: อ่านไฟล์ JSON → ใส่กลับเข้า IndexedDB (ข้าม id ที่ซ้ำ)
+   • ทุกอย่างทำในเครื่องทั้งหมด — ไฟล์สำรองอยู่กับผู้ใช้เท่านั้น 🔒
+   ========================================================= */
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error || new Error('อ่านไฟล์รูปไม่สำเร็จ'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+function dataUrlToBlob(dataUrl) {
+  return new Promise((resolve, reject) => {
+    try {
+      const base64 = dataUrl.split(',')[1];
+      const mime = (dataUrl.match(/^data:([^;]+)/) || [])[1] || 'application/octet-stream';
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      resolve(new Blob([bytes], { type: mime }));
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+/** เพิ่มรายการโดยไม่ทับของเดิม — คืน true ถ้าเพิ่มใหม่, false ถ้า id ซ้ำ */
+function addMemorySafe(memory) {
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).add(memory);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => resolve(false);
+    tx.onabort = () => resolve(false);
+  });
+}
+
+async function exportData() {
+  if (!db) {
+    showToast('ยังเปิดพื้นที่จัดเก็บไม่ได้ ลองรีเฟรชหน้าก่อนนะ 🥺');
+    return;
+  }
+  els.exportBtn.disabled = true;
+  try {
+    const memories = await getAllMemories();
+    const payload = {
+      app: 'love-memory-app',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      count: memories.length,
+      memories: [],
+    };
+
+    for (const memory of memories) {
+      const item = {
+        id: memory.id,
+        text: memory.text || '',
+        createdAt: memory.createdAt,
+        photo: null,
+      };
+      if (memory.photo instanceof Blob) {
+        item.photo = await blobToDataUrl(memory.photo);
+      }
+      payload.memories.push(item);
+    }
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'love-memory-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    showToast('ดาวน์โหลดไฟล์สำรองแล้ว 📥');
+  } catch (err) {
+    console.error('ส่งออกไม่สำเร็จ:', err);
+    showToast('ส่งออกไม่สำเร็จ ลองอีกครั้งนะ 🥺');
+  } finally {
+    els.exportBtn.disabled = false;
+  }
+}
+
+async function importData(file) {
+  if (!file) return;
+  if (!db) {
+    showToast('ยังเปิดพื้นที่จัดเก็บไม่ได้ ลองรีเฟรชหน้าก่อนนะ 🥺');
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(await file.text());
+    const list = Array.isArray(parsed) ? parsed : Array.isArray(parsed.memories) ? parsed.memories : null;
+    if (!list) throw new Error('โครงสร้างไฟล์ไม่ถูกต้อง');
+
+    let added = 0;
+    let skipped = 0;
+    for (const item of list) {
+      const memory = {
+        id: typeof item.id === 'string' && item.id ? item.id : createId(),
+        text: typeof item.text === 'string' ? item.text : '',
+        photo: null,
+        createdAt: Number.isFinite(item.createdAt) ? item.createdAt : Date.now(),
+      };
+      if (typeof item.photo === 'string' && item.photo.indexOf('data:image/') === 0) {
+        memory.photo = await dataUrlToBlob(item.photo);
+      }
+      const isNew = await addMemorySafe(memory);
+      if (isNew) { added += 1; } else { skipped += 1; }
+    }
+
+    await renderGallery();
+    showToast('นำเข้าสำเร็จ: เพิ่ม ' + added + ' รายการ' + (skipped > 0 ? ' (ข้ามที่ซ้ำ ' + skipped + ')' : '') + ' 💖', 3500);
+  } catch (err) {
+    console.error('นำเข้าไม่สำเร็จ:', err);
+    showToast('ไฟล์ไม่ถูกต้องหรือนำเข้าไม่สำเร็จ 🥺');
+  }
 }
 
 /* =========================================================
@@ -642,8 +898,10 @@ function bindEvents() {
    ========================================================= */
 
 async function init() {
+  setupTheme();          // 🌙 ใช้ธีมที่จำไว้ทันทีที่เปิดหน้า
   createFloatingHearts(HEART_COUNT);
   bindEvents();
+  renderDaysCounter();   // ⏳ แสดงจำนวนวันที่คบกัน (ถ้าตั้งวันแรกไว้)
 
   try {
     db = await openDatabase();

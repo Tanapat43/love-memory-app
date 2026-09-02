@@ -21,6 +21,7 @@
   --shadow-soft: 0 10px 30px rgba(240, 98, 146, 0.16);
   --shadow-lift: 0 18px 40px rgba(240, 98, 146, 0.28);
   --radius: 20px;
+  --card: rgba(255, 255, 255, 0.78);
 }
 
 * { box-sizing: border-box; }
@@ -107,7 +108,7 @@ body {
   display: inline-block;
   margin: 0;
   padding: 0.6em 1.2em;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--card);
   border: 1.5px solid var(--pink);
   border-radius: 999px;
   color: var(--pink-text);
@@ -121,9 +122,9 @@ body {
 
 /* ---------- การ์ดฟอร์มอัปโหลด ---------- */
 .upload-card {
-  background: rgba(255, 255, 255, 0.78);
+  background: var(--card);
   backdrop-filter: blur(6px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--pink-soft);
   border-radius: var(--radius);
   padding: 1.6rem 1.5rem 1.8rem;
   box-shadow: var(--shadow-soft);
@@ -189,7 +190,7 @@ body {
   height: auto;
   object-fit: contain;
   border-radius: 10px;
-  border: 4px solid #fff;
+  border: 4px solid var(--white);
   box-shadow: var(--shadow-soft);
 }
 
@@ -218,7 +219,7 @@ textarea {
   padding: 0.8rem 1rem;
   border: 2px solid var(--pink-soft);
   border-radius: 14px;
-  background: #fffdfd;
+  background: var(--white);
   font: inherit;
   color: var(--ink);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -306,7 +307,7 @@ textarea:focus {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #fff;
+  background: var(--white);
   border: 3px solid var(--pink);
   font-size: 1.05rem;
   box-shadow: 0 4px 12px rgba(240, 98, 146, 0.3);
@@ -430,7 +431,7 @@ textarea:focus {
   height: 30px;
   border: none;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--white);
   color: var(--danger);
   font-size: 0.95rem;
   font-weight: 700;
@@ -456,7 +457,7 @@ textarea:focus {
   text-align: center;
   border: 2.5px dashed var(--pink-soft);
   border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--card);
   color: var(--ink-soft);
 }
 
@@ -486,7 +487,7 @@ textarea:focus {
 }
 
 .modal {
-  background: #fff;
+  background: var(--white);
   border-radius: 22px;
   padding: 1.8rem 1.6rem;
   max-width: 360px;
@@ -511,7 +512,7 @@ textarea:focus {
   transition: transform 0.2s ease, filter 0.2s ease, background 0.2s ease;
 }
 
-.btn-ghost { border: 2px solid var(--pink-soft); background: #fff; color: var(--ink-soft); }
+.btn-ghost { border: 2px solid var(--pink-soft); background: var(--white); color: var(--ink-soft); }
 .btn-ghost:hover { background: var(--pink-light); transform: translateY(-1px); }
 
 .btn-danger {
@@ -590,6 +591,11 @@ textarea:focus {
   .caption-text { font-size: 0.9rem; }
   .modal-actions { flex-direction: column; }
   .modal-actions .btn-ghost, .modal-actions .btn-danger { width: 100%; }
+  .theme-toggle { width: 40px; height: 40px; top: 10px; right: 10px; font-size: 1.1rem; }
+  .days-card { padding: 1rem 1rem 1.1rem; }
+  .days-controls { flex-direction: column; }
+  .backup-actions { flex-direction: column; }
+  .backup-actions .btn-soft { width: 100%; text-align: center; }
 }
 
 /* ---------- ♿ เคารพการตั้งค่า reduced motion ของผู้ใช้ ---------- */
@@ -604,5 +610,156 @@ textarea:focus {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- 🌙 ปุ่มสลับธีม (มุมขวาบน) ---------- */
+.theme-toggle {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 40;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--pink);
+  border-radius: 50%;
+  background: var(--card);
+  font-size: 1.3rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.2s ease;
+}
+
+.theme-toggle:hover { transform: translateY(-2px) rotate(-12deg); }
+.theme-toggle:active { transform: scale(0.94); }
+
+/* ---------- ⏳ นับจำนวนวันที่คบกัน ---------- */
+.days-counter { display: flex; justify-content: center; margin: 0 0 1.4rem; }
+
+.days-card {
+  background: var(--card);
+  backdrop-filter: blur(6px);
+  border: 1.5px solid var(--pink);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.6rem 1.3rem;
+  text-align: center;
+  box-shadow: var(--shadow-soft);
+  width: min(360px, 100%);
+}
+
+.days-emoji { margin: 0 0 0.2rem; font-size: 1.9rem; animation: bounce 2.2s ease-in-out infinite; }
+
+.days-text {
+  margin: 0 0 0.9rem;
+  color: var(--pink-text);
+  font-weight: 700;
+  font-size: 1.05rem;
+  white-space: pre-line;
+}
+
+.days-controls { display: flex; gap: 0.5rem; justify-content: center; align-items: center; }
+
+.days-input {
+  padding: 0.45rem 0.8rem;
+  border: 2px solid var(--pink-soft);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.92rem;
+}
+
+.days-input:focus {
+  outline: none;
+  border-color: var(--pink-deep);
+  box-shadow: 0 0 0 4px rgba(240, 98, 146, 0.15);
+}
+
+.btn-clear-days {
+  border: none;
+  background: rgba(240, 98, 146, 0.12);
+  color: var(--pink-text);
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-clear-days:hover { background: rgba(240, 98, 146, 0.22); }
+
+/* ---------- 🧰 สำรอง / กู้คืนข้อมูล ---------- */
+.backup-card {
+  background: var(--card);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--pink-soft);
+  border-radius: var(--radius);
+  padding: 1.3rem 1.5rem;
+  box-shadow: var(--shadow-soft);
+  margin-bottom: 2.6rem;
+}
+
+.backup-card h2 { margin: 0 0 0.3rem; color: var(--pink-text); font-size: 1.2rem; }
+
+.backup-desc { margin: 0 0 1rem; color: var(--ink-soft); font-size: 0.9rem; }
+
+.backup-actions { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+
+.btn-soft {
+  border: 2px solid var(--pink-soft);
+  background: var(--white);
+  color: var(--pink-text);
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.btn-soft:hover { background: var(--pink-light); transform: translateY(-1px); }
+
+/* ---------- 🌙 โหมดกลางคืน: ชมพูเข้มอมดำโรแมนติก สบายตา ---------- */
+html.dark-mode {
+  --pink-bg-1: #1a0f18;
+  --pink-bg-2: #2a1b28;
+  --pink-bg-3: #221321;
+  --pink-light: #3d2438;
+  --pink-soft: #4a2b44;
+  --pink: #ff8fb3;
+  --pink-deep: #f04e86;
+  --pink-text: #ffb3cd;
+  --ink: #f3dce7;
+  --ink-soft: #c39aab;
+  --white: #2a1b28;
+  --danger: #ff6b81;
+  --card: rgba(42, 27, 40, 0.82);
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --shadow-lift: 0 18px 40px rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+html.dark-mode .title {
+  background: linear-gradient(120deg, #ff8fb3, #ffb3cd 55%, #ffd0e0);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+html.dark-mode .drop-zone { background: rgba(240, 98, 146, 0.12); }
+html.dark-mode .drop-zone:hover, html.dark-mode .drop-zone.is-dragging { background: rgba(240, 98, 146, 0.22); }
+html.dark-mode .modal-overlay { background: rgba(10, 5, 9, 0.65); }
+html.dark-mode .text-only { background: linear-gradient(135deg, #3a2334, #4a2b44); }
+html.dark-mode .polaroid-media img { background: #3a2334; }
+html.dark-mode ::-webkit-scrollbar-thumb { background: var(--pink-soft); }
+
+/* ไล่พื้นหลังนุ่มนวลเวลาสลับธีม */
+body { transition: background 0.35s ease; }
 
 
