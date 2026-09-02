@@ -34,8 +34,8 @@ const firebaseConfig = {
   projectId: "love-memory-app-3b789",
   storageBucket: "love-memory-app-3b789.firebasestorage.app",
   messagingSenderId: "182943512763",
-  appId: "1:182943512763:web:6fe8b46ea2bba84d3e119e",
-  measurementId: "G-4D5K0P8K2T",
+  appId: "1:182943512763:web:7281b9c71d897e4e3e119e",
+  measurementId: "G-JWEGCYM8Y9"
 };
 const THEME_STORAGE_KEY = 'love-memory-theme';     // 🌙 จำธีมล่าสุด (เก็บในเครื่องเท่านั้น)
 const ANNIVERSARY_KEY = 'love-memory-anniversary'; // ⏳ วันแรกที่เริ่มคบกัน (เก็บในเครื่องเท่านั้น)
