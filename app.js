@@ -15,8 +15,11 @@ const DB_NAME = 'love-memory-db';
 const DB_VERSION = 1;
 const STORE_NAME = 'memories';
 const MAX_FILE_MB = 20;
-const MAX_IMAGE_WIDTH = 1200;   // 🖼️ ความกว้างสูงสุดหลังย่อด้วย Canvas (px)
-const COMPRESS_QUALITY = 0.75;  // คุณภาพภาพ WEBP/JPEG (ช่วง 0.7 - 0.8)
+const MAX_IMAGE_WIDTH = 800;    // 🖼️ ความกว้างสูงสุดหลังย่อด้วย Canvas (พอดีความละเอียดจอมือถือ)
+const MAX_IMAGE_HEIGHT = 800;   // ความสูงสุดหลังย่อ (กันรูปแนวตั้งยาวกินหน่วยความจำ)
+const COMPRESS_QUALITY = 0.6;   // คุณภาพเริ่มต้น JPEG: canvas.toDataURL('image/jpeg', 0.6)
+const MIN_QUALITY = 0.4;        // คุณภาพต่ำสุดที่ยอม (ลดทีละขั้นถ้าไฟล์ยังใหญ่เกินเป้า)
+const TARGET_MAX_KB = 300;      // เป้าหมายขนาดไฟล์หลังบีบอัด (ช่วง 100 - 300 KB)
 const KEEP_ORIGINAL_IF_SMALLER_THAN = 300 * 1024; // ไฟล์เล็กและไม่ต้องย่อ → เก็บต้นฉบับ
 const THEME_STORAGE_KEY = 'love-memory-theme';     // 🌙 จำธีมล่าสุด (เก็บในเครื่องเท่านั้น)
 const ANNIVERSARY_KEY = 'love-memory-anniversary'; // ⏳ วันแรกที่เริ่มคบกัน (เก็บในเครื่องเท่านั้น)
@@ -66,13 +69,29 @@ const objectUrls = new Set();  // Object URL ของรูปในแกล�
    ส่วนที่ 1: IndexedDB — ฐานข้อมูลในเครื่องของผู้ใช้เท่านั้น
    ========================================================= */
 
-/** เปิดฐานข้อมูล (สร้าง object store อัตโนมัติถ้ายังไม่มี) */
+/** เปิดฐานข้อมูล (สร้าง object store อัตโนมัติ + กันค้างด้วย timeout) */
 function openDatabase() {
   return new Promise((resolve, reject) => {
     if (!('indexedDB' in window)) {
       reject(new Error('เบราว์เซอร์นี้ไม่รองรับ IndexedDB'));
       return;
     }
+
+    let settled = false;
+
+    // กันค้างบนมือถือ: ถ้าเปิดไม่เสร็จภายใน 10 วินาที ให้ fail พร้อมข้อความเข้าใจง่าย
+    const timeoutId = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error('เปิดฐานข้อมูลช้าผิดปกติ ลองปิดแท็บอื่นของเว็บนี้แล้วรีเฟรชหน้านะ 🥺'));
+    }, 10000);
+
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      callback(value);
+    };
 
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -84,16 +103,42 @@ function openDatabase() {
       }
     };
 
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error || new Error('เปิดฐานข้อมูลไม่สำเร็จ'));
+    request.onsuccess = () => {
+      const database = request.result;
+      // กัน transaction ค้าง: ถ้ามีแท็บอื่นขออัปเกรดเวอร์ชัน ให้ปิดการเชื่อมต่อนี้อย่างสวยงาม
+      database.onversionchange = () => database.close();
+      finish(resolve, database);
+    };
+    request.onerror = () => finish(reject, request.error || new Error('เปิดฐานข้อมูลไม่สำเร็จ'));
+    request.onblocked = () => finish(reject, new Error('มีแท็บอื่นของเว็บนี้เปิดค้างอยู่ ปิดแท็บอื่นแล้วรีเฟรชหน้านะ 💗'));
   });
 }
 
-/** เพิ่มความทรงจำใหม่ลงฐานข้อมูล */
+/** เพิ่มความทรงจำใหม่ลงฐานข้อมูล (กัน error ทุกกรณี รวมถึงธุรกรรมค้าง) */
 function addMemoryRecord(memory) {
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).add(memory);
+    if (!db) {
+      reject(new Error('ฐานข้อมูลยังไม่พร้อม ลองรีเฟรชหน้าก่อนนะ'));
+      return;
+    }
+
+    let tx;
+    try {
+      tx = db.transaction(STORE_NAME, 'readwrite');
+    } catch (err) {
+      // เช่น InvalidStateError เมื่อการเชื่อมต่อถูกปิดไปแล้ว
+      reject(err);
+      return;
+    }
+
+    try {
+      tx.objectStore(STORE_NAME).add(memory);
+    } catch (err) {
+      // เช่น DataCloneError เมื่อข้อมูลไม่สามารถเก็บลงฐานข้อมูลได้
+      reject(err);
+      return;
+    }
+
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error || new Error('เขียนข้อมูลลง IndexedDB ไม่สำเร็จ'));
     tx.onabort = () => reject(tx.error || new Error('ธุรกรรม IndexedDB ถูกยกเลิก'));
@@ -220,101 +265,100 @@ function clearForm() {
 /* =========================================================
    ส่วนที่ 3.5: บีบอัดรูปภาพก่อนบันทึก (Image Compression)
    ---------------------------------------------------------
-   • ย่อขนาดด้วย HTML5 Canvas ให้ความกว้างไม่เกิน 1200px
-   • เข้ารหัสเป็น WEBP คุณภาพ 0.75 (ถ้าเบราว์เซอร์ไม่รองรับ
-     จะใช้ JPEG แทน) — ลดขนาดจากหลาย MB เหลือไม่กี่แสน KB
+   • อ่านไฟล์ด้วย FileReader → data URL (เสถียรบนมือถือทุกตัว)
+   • ย่อด้วย HTML5 Canvas ให้ไม่เกิน 800 × 800 px (พอดีจอมือถือ
+     และใช้หน่วยความจำน้อย ไม่พังบน iOS/Android)
+   • เข้ารหัส canvas.toDataURL('image/jpeg', 0.6) แล้วลดคุณภาพ
+     ทีละขั้นจนไฟล์เล็กกว่า ~300 KB
    • แก้ปัญหา "บันทึกไม่สำเร็จ" / Quota Error บนเบราว์เซอร์มือถือ
    • ทุกกรณีที่บีบอัดไม่สำเร็จ จะคืนไฟล์ต้นฉบับให้บันทึกต่อได้เสมอ
    ========================================================= */
 
-let webpEncodeSupported = null;
-
-/** เช็คว่าเบราว์เซอร์เข้ารหัส WEBP ผ่าน Canvas ได้หรือไม่ (เช็คครั้งเดียวแล้วจำ) */
-function supportsWebpEncode() {
-  if (webpEncodeSupported !== null) return webpEncodeSupported;
-  try {
-    const test = document.createElement('canvas');
-    test.width = 1;
-    test.height = 1;
-    webpEncodeSupported = test.toDataURL('image/webp').indexOf('data:image/webp') === 0;
-  } catch {
-    webpEncodeSupported = false;
-  }
-  return webpEncodeSupported;
+/** โหลดรูปจาก data URL เป็น Image (พร้อม Promise) */
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('อ่านหรือถอดรหัสรูปภาพไม่สำเร็จ'));
+    img.src = src;
+  });
 }
 
 /**
- * ย่อ + บีบอัดรูปภาพเป็น Blob ขนาดเล็ก
+ * ย่อ + บีบอัดรูปภาพเป็น Blob ขนาดเล็ก (เหมาะกับมือถือ)
+ * ขั้นตอน: FileReader → data URL → Image → Canvas ย่อไม่เกิน 800×800
+ *          → toDataURL('image/jpeg', 0.6) → ลดคุณภาพทีละขั้นถ้ายังใหญ่
  * @param {File|Blob} file ไฟล์รูปที่ผู้ใช้เลือก
  * @returns {Promise<File|Blob>} Blob ที่บีบอัดแล้ว หรือไฟล์ต้นฉบับถ้าบีบอัดไม่คุ้ม/ไม่สำเร็จ
  */
-function compressImage(file) {
-  return new Promise((resolve) => {
-    if (!file || !file.type || !file.type.startsWith('image/')) {
-      resolve(file);
-      return;
+async function compressImage(file) {
+  if (!file || !file.type || !file.type.startsWith('image/')) {
+    return file;
+  }
+
+  // GIF ภาพเคลื่อนไหว: ผ่าน Canvas จะเหลือเฟรมเดียว → เก็บต้นฉบับไว้
+  if (file.type === 'image/gif') {
+    return file;
+  }
+
+  try {
+    // 1) อ่านไฟล์เป็น data URL ด้วย FileReader (เสถียรบนมือถือมากกว่า objectURL)
+    const originalDataUrl = await blobToDataUrl(file);
+
+    // 2) โหลดเป็น Image เพื่อวัดขนาดจริงของรูป
+    const img = await loadImage(originalDataUrl);
+    const scale = Math.min(
+      1,
+      MAX_IMAGE_WIDTH / img.naturalWidth,
+      MAX_IMAGE_HEIGHT / img.naturalHeight
+    );
+
+    // รูปเล็กอยู่แล้วและไฟล์ไม่ใหญ่ → เก็บต้นฉบับ (คมชัดที่สุด ไม่ต้องเสียเวลาเข้ารหัส)
+    if (scale >= 1 && file.size <= KEEP_ORIGINAL_IF_SMALLER_THAN) {
+      console.log('🖼️ Original size vs Compressed size: ' + formatBytes(file.size) + ' → เก็บต้นฉบับ (รูปเล็กอยู่แล้ว)');
+      return file;
     }
 
-    // GIF ภาพเคลื่อนไหว: ผ่าน Canvas จะเหลือเฟรมเดียว → เก็บต้นฉบับไว้
-    if (file.type === 'image/gif') {
-      resolve(file);
-      return;
+    // 3) วาดลง Canvas ขนาดที่ย่อแล้ว
+    const targetWidth = Math.max(1, Math.round(img.naturalWidth * scale));
+    const targetHeight = Math.max(1, Math.round(img.naturalHeight * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff'; // JPEG ไม่มีความโปร่งใส → รองพื้นขาวกันภาพดำทั้งใบ
+    ctx.fillRect(0, 0, targetWidth, targetHeight);
+    ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+    // 4) เข้ารหัส JPEG คุณภาพ 0.6 แล้วลดคุณภาพทีละขั้นถ้ายังใหญ่เกินเป้า
+    let quality = COMPRESS_QUALITY;
+    let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+    if (typeof compressedDataUrl !== 'string' || compressedDataUrl.indexOf('data:image/jpeg') !== 0) {
+      throw new Error('เข้ารหัสรูปภาพไม่สำเร็จ');
     }
 
-    const objectUrl = URL.createObjectURL(file);
-    const img = new Image();
+    const targetBytes = TARGET_MAX_KB * 1024;
+    while (compressedDataUrl.length * 0.75 > targetBytes && quality > MIN_QUALITY) {
+      quality = Math.max(MIN_QUALITY, quality - 0.1);
+      compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+    }
 
-    img.onload = () => {
-      try {
-        const needsResize = img.naturalWidth > MAX_IMAGE_WIDTH;
+    // 5) แปลง data URL กลับเป็น Blob เพื่อเก็บลง IndexedDB
+    const blob = await dataUrlToBlob(compressedDataUrl);
 
-        // รูปเล็กอยู่แล้วและไฟล์ไม่ใหญ่ → เก็บต้นฉบับ (คมชัดที่สุด ไม่ต้องเสียเวลาเข้ารหัส)
-        if (!needsResize && file.size <= KEEP_ORIGINAL_IF_SMALLER_THAN) {
-          URL.revokeObjectURL(objectUrl);
-          resolve(file);
-          return;
-        }
+    // 🔍 Debug: เทียบขนาดไฟล์ก่อน-หลังบีบอัด
+    console.log('🖼️ Original size vs Compressed size: ' + formatBytes(file.size) + ' → ' + formatBytes(blob.size)
+      + ' | ภาพ: ' + img.naturalWidth + '×' + img.naturalHeight + ' → ' + targetWidth + '×' + targetHeight
+      + ' | quality: ' + quality.toFixed(2));
 
-        const targetWidth = needsResize ? MAX_IMAGE_WIDTH : img.naturalWidth;
-        const targetHeight = needsResize
-          ? Math.round(img.naturalHeight * (MAX_IMAGE_WIDTH / img.naturalWidth))
-          : img.naturalHeight;
-
-        const canvas = document.createElement('canvas');
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
-
-        const ctx = canvas.getContext('2d');
-        const outputType = supportsWebpEncode() ? 'image/webp' : 'image/jpeg';
-
-        // JPEG ไม่รองรับความโปร่งใส → รองพื้นสีขาวกันภาพดำทั้งใบ
-        if (outputType === 'image/jpeg') {
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, targetWidth, targetHeight);
-        }
-
-        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-        URL.revokeObjectURL(objectUrl);
-
-        canvas.toBlob((blob) => {
-          // ใช้ผลลัพธ์เฉพาะเมื่อเล็กกว่าไฟล์ต้นฉบับจริง ไม่งั้นเก็บต้นฉบับ
-          resolve(blob && blob.size > 0 && blob.size < file.size ? blob : file);
-        }, outputType, COMPRESS_QUALITY);
-      } catch (err) {
-        console.warn('บีบอัดรูปไม่สำเร็จ ใช้ไฟล์ต้นฉบับแทน:', err);
-        URL.revokeObjectURL(objectUrl);
-        resolve(file);
-      }
-    };
-
-    img.onerror = () => {
-      // อ่านรูปไม่สำเร็จ (เช่น ฟอร์แมตที่เบราว์เซอร์ไม่รองรับ) → ใช้ไฟล์ต้นฉบับ
-      URL.revokeObjectURL(objectUrl);
-      resolve(file);
-    };
-
-    img.src = objectUrl;
-  });
+    // ใช้ผลลัพธ์เฉพาะเมื่อเล็กกว่าไฟล์ต้นฉบับจริง ไม่งั้นเก็บต้นฉบับ
+    return blob.size > 0 && blob.size < file.size ? blob : file;
+  } catch (err) {
+    console.warn('บีบอัดรูปไม่สำเร็จ ใช้ไฟล์ต้นฉบับแทน:', err);
+    return file;
+  }
 }
 
 /* =========================================================
@@ -349,8 +393,13 @@ async function handleSave(event) {
     showToast('บันทึกความทรงจำแล้ว 💖');
   } catch (err) {
     console.error('บันทึกไม่สำเร็จ:', err);
-    if (err && (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+    const errorName = err && err.name;
+    if (errorName === 'QuotaExceededError' || errorName === 'NS_ERROR_DOM_QUOTA_REACHED') {
       showToast('พื้นที่จัดเก็บเต็มแล้ว 🥺 ลองลบความทรงจำเก่าบางส่วนก่อนนะ', 5000);
+    } else if (errorName === 'DataCloneError') {
+      showToast('รูปภาพนี้เก็บลงเครื่องไม่ได้ ลองเลือกรูปอื่นนะ 🖼️');
+    } else if (err && typeof err.message === 'string' && err.message.indexOf('แท็บอื่น') !== -1) {
+      showToast(err.message, 5000);
     } else {
       showToast('บันทึกไม่สำเร็จ ลองอีกครั้งนะ 🥺');
     }
