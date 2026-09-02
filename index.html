@@ -18,6 +18,32 @@
   <!-- 🌙 ปุ่มสลับโหมดกลางคืน/กลางวัน -->
   <button type="button" class="theme-toggle" id="themeToggle" aria-label="สลับไปโหมดกลางคืน" title="สลับธีม">🌙</button>
 
+  <!-- 🔑 หน้าเข้าสู่ระบบ / สมัครสมาชิก (แสดงเมื่อยังไม่ล็อกอิน) -->
+  <div class="auth-view" id="authView">
+    <div class="auth-card">
+      <p class="auth-logo" aria-hidden="true">💕</p>
+      <h1 class="auth-title">ความทรงจำของเรา</h1>
+      <p class="auth-subtitle">ล็อกอินเพื่อเก็บความทรงจำไว้ในคลาวด์ส่วนตัวของคุณ</p>
+
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="auth-tab active" id="tabLogin">เข้าสู่ระบบ</button>
+        <button type="button" class="auth-tab" id="tabRegister">สมัครสมาชิก</button>
+      </div>
+
+      <form id="authForm" novalidate>
+        <input type="email" id="authEmail" placeholder="📧 อีเมล" autocomplete="email" required />
+        <input type="password" id="authPassword" placeholder="🔑 รหัสผ่าน (อย่างน้อย 6 ตัว)" minlength="6" required />
+        <button type="submit" class="btn-primary" id="authSubmitBtn">💕 เข้าสู่ระบบ</button>
+        <p class="auth-error hidden" id="authError" role="alert"></p>
+      </form>
+
+      <p class="auth-note">🔒 ความทรงจำของคุณจะถูกเก็บในบัญชีส่วนตัวของคุณเอง ไม่มีใครเห็นยกเว้นคุณ</p>
+    </div>
+  </div>
+
+  <!-- 🚪 ปุ่มออกจากระบบ (มุมซ้ายบน แสดงเมื่อล็อกอินอยู่) -->
+  <button type="button" class="logout-btn hidden" id="logoutBtn" aria-label="ออกจากระบบ" title="ออกจากระบบ">🚪 <span id="userEmail">ออกจากระบบ</span></button>
+
   <!-- ===== ส่วนหัว ===== -->
   <header class="header">
     <h1 class="title">💕 ความทรงจำของเรา 💕</h1>
@@ -36,7 +62,7 @@
       </div>
     </section>
 
-    <p class="privacy-badge">🔒 ข้อมูลถูกบันทึกในเครื่องของคุณเท่านั้น ปลอดภัย 100%</p>
+    <p class="privacy-badge">🔒 ความทรงจำของคุณเก็บในบัญชีส่วนตัวของคุณเอง — ไม่มีใครเห็นยกเว้นคุณ</p>
   </header>
 
   <main class="container">
@@ -95,7 +121,7 @@
 
   <!-- ===== ส่วนท้าย ===== -->
   <footer class="footer">
-    <p>🔒 เว็บนี้ไม่ส่งข้อมูลออกไปยังเซิร์ฟเวอร์ใดๆ ทั้งสิ้น — บันทึกด้วย IndexedDB ในเบราว์เซอร์ของคุณเอง</p>
+    <p>🔒 ความทรงจำเก็บในบัญชีของคุณ (Firebase ส่วนตัว) + แคชในเครื่องเพื่อให้ดูได้แม้ไม่มีเน็ต</p>
     <p id="storageInfo">💾 กำลังตรวจสอบพื้นที่จัดเก็บ...</p>
     <p class="version-tag">v3.0.0</p>
   </footer>
@@ -119,6 +145,11 @@
     <p style="text-align:center">กรุณาเปิดใช้งาน JavaScript เพื่อบันทึกความทรงจำไว้ในเครื่องของคุณ</p>
   </noscript>
 
+  <!-- ☁️ Firebase SDK (compat build — ใช้ได้ทั้งบนเว็บและเปิดไฟล์ในเครื่อง, ไม่เปิด Analytics) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

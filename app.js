@@ -24,6 +24,19 @@ const MAX_DATAURL_CHARS = 200 * 1024; // ความยาว string data URL �
 const KEEP_ORIGINAL_IF_SMALLER_THAN = 100 * 1024; // ไฟล์เล็กและไม่ต้องย่อ → เก็บต้นฉบับ
 const APP_VERSION = '3.0.0';    // เวอร์ชันแอป (ดูที่ footer + Console เวลา debug บนมือถือ)
 const LOCAL_MEMORIES_KEY = 'love-memory-local-memories'; // 🧯 ที่เก็บสำรองเมื่อ IndexedDB ใช้ไม่ได้
+
+/* ---------- ☁️ Firebase — คลาวด์ส่วนตัวของเจ้าของแอป ----------
+   • เก็บในโปรเจกต์ Firebase ของคุณเอง (แยกข้อมูลตาม uid ของผู้ใช้)
+   • ไม่เปิดใช้ Analytics เพื่อคงความเป็นส่วนตัวสูงสุด */
+const firebaseConfig = {
+  apiKey: "AIzaSyB7QGH2CactwM13JITwYOoCmEjfe68WhL4",
+  authDomain: "love-memory-app-3b789.firebaseapp.com",
+  projectId: "love-memory-app-3b789",
+  storageBucket: "love-memory-app-3b789.firebasestorage.app",
+  messagingSenderId: "182943512763",
+  appId: "1:182943512763:web:6fe8b46ea2bba84d3e119e",
+  measurementId: "G-4D5K0P8K2T",
+};
 const THEME_STORAGE_KEY = 'love-memory-theme';     // 🌙 จำธีมล่าสุด (เก็บในเครื่องเท่านั้น)
 const ANNIVERSARY_KEY = 'love-memory-anniversary'; // ⏳ วันแรกที่เริ่มคบกัน (เก็บในเครื่องเท่านั้น)
 const HEART_EMOJIS = ['💗', '💖', '💕', '🩷', '💞', '🌸'];
@@ -58,6 +71,16 @@ const els = {
   clearAnniversary: document.getElementById('clearAnniversary'),
   exportBtn: document.getElementById('exportBtn'),
   importInput: document.getElementById('importInput'),
+  authView: document.getElementById('authView'),
+  authForm: document.getElementById('authForm'),
+  authEmail: document.getElementById('authEmail'),
+  authPassword: document.getElementById('authPassword'),
+  authSubmitBtn: document.getElementById('authSubmitBtn'),
+  authError: document.getElementById('authError'),
+  tabLogin: document.getElementById('tabLogin'),
+  tabRegister: document.getElementById('tabRegister'),
+  logoutBtn: document.getElementById('logoutBtn'),
+  userEmail: document.getElementById('userEmail'),
 };
 
 /* ---------- สถานะของแอป ---------- */
@@ -65,7 +88,14 @@ let db = null;                 // การเชื่อมต่อฐาน�
 let pendingFile = null;        // รูปที่เลือกไว้ก่อนกดบันทึก
 let previewUrl = null;         // Object URL ของรูปตัวอย่าง
 let pendingDeleteId = null;       // รายการที่รอยืนยันการลบ
-let pendingDeleteStorage = 'indexeddb'; // แหล่งจัดเก็บของรายการที่รอลบ (indexeddb/localstorage)
+let pendingDeleteStorage = 'indexeddb'; // แหล่งจัดเก็บของรายการที่รอลบ (cloud/indexeddb/localstorage)
+let auth = null;                  // Firebase Auth
+let firestore = null;             // Cloud Firestore
+let storage = null;               // Firebase Storage
+let currentUser = null;           // ผู้ใช้ที่ล็อกอินอยู่
+let cloudMemories = [];           // ความทรงจำที่โหลดจาก Firestore
+let authMode = 'login';           // โหมดหน้าล็อกอิน (login/register)
+let authStateResolved = false;    // ได้รับสถานะล็อกอินจาก Firebase แล้วหรือยัง
 let toastTimer = null;
 const objectUrls = new Set();  // Object URL ของรูปในแกลเลอรี (คืนหน่วยความจำทีหลัง)
 
@@ -256,13 +286,14 @@ async function getAllMemoriesSafe() {
   }
 }
 
-/** รวมความทรงจำจาก IndexedDB + localStorage (ตัด id ซ้ำ โดยเอา IndexedDB ก่อน) */
+/** รวมความทรงจำจากคลาวด์ + IndexedDB + localStorage (ตัด id ซ้ำ: คลาวด์ > IDB > local) */
 async function collectAllMemories() {
+  const cloudList = cloudMemories.map((m) => Object.assign({}, m, { _storage: 'cloud' }));
   const idbList = (await getAllMemoriesSafe()).map((m) => Object.assign({}, m, { _storage: 'indexeddb' }));
   const localList = getLocalMemories().map((m) => Object.assign({}, m, { _storage: 'localstorage' }));
 
   const seen = new Set();
-  return idbList.concat(localList).filter((m) => {
+  return cloudList.concat(idbList, localList).filter((m) => {
     if (seen.has(m.id)) return false;
     seen.add(m.id);
     return true;
@@ -558,14 +589,37 @@ async function handleSave(event) {
       createdAt: Date.now(),
     };
 
-    const storageUsed = await saveMemoryWithFallback(memory); // IDB ก่อน ถ้าพังสลับ localStorage อัตโนมัติ
-    savedOk = true;
+    if (currentUser && firestore) {
+      // ☁️ โหมดล็อกอิน: อัปโหลดรูปขึ้น Storage → บันทึกข้อความ/วันที่/URL ลง Firestore
+      let photoUrl = null;
+      if (photo instanceof Blob) {
+        photoUrl = await uploadPhotoToStorage(currentUser.uid, memory.id, photo);
+      }
 
-    clearForm();
-    if (storageUsed === 'localstorage') {
-      showToast('บันทึกแล้ว (โหมดสำรองของเครื่อง) 💾', 3500);
+      await saveMemoryToFirestore(currentUser.uid, {
+        id: memory.id,
+        text: memory.text,
+        createdAt: memory.createdAt,
+        photoUrl: photoUrl,
+      });
+
+      // แคชลงเครื่องด้วย (เปิดดูออฟไลน์ได้) — ใช้ put กัน id ซ้ำ
+      await putMemoryRecord(Object.assign({}, memory, { photoUrl: photoUrl, synced: true }));
+
+      savedOk = true;
+      clearForm();
+      showToast('บันทึกขึ้นคลาวด์แล้ว ☁️💖');
     } else {
-      showToast('บันทึกความทรงจำแล้ว 💖');
+      // 💾 โหมดออฟไลน์: เซฟในเครื่อง (IndexedDB → localStorage สำรอง)
+      const storageUsed = await saveMemoryWithFallback(memory);
+      savedOk = true;
+
+      clearForm();
+      if (storageUsed === 'localstorage') {
+        showToast('บันทึกแล้ว (โหมดสำรองของเครื่อง) 💾', 3500);
+      } else {
+        showToast('บันทึกความทรงจำแล้ว 💖');
+      }
     }
   } catch (err) {
     // 🔍 แจ้ง error ที่เฉพาะเจาะจงลง Console เพื่อวิเคราะห์บนมือถือ
@@ -659,8 +713,8 @@ function createPolaroidCard(memory) {
     img.alt = memory.text ? 'รูปความทรงจำ: ' + memory.text.slice(0, 80) : 'รูปความทรงจำ';
     img.loading = 'lazy';
     media.appendChild(img);
-  } else if (typeof memory.photo === 'string' && memory.photo.indexOf('data:image/') === 0) {
-    // รูปจากโหมดสำรอง localStorage (เก็บเป็น data URL)
+  } else if (typeof memory.photo === 'string' && (memory.photo.indexOf('data:image/') === 0 || memory.photo.indexOf('https://') === 0)) {
+    // รูปจากโหมดสำรอง localStorage (data URL) หรือจากคลาวด์ (Firebase Storage URL)
     const img = document.createElement('img');
     img.src = memory.photo;
     img.alt = memory.text ? 'รูปความทรงจำ: ' + memory.text.slice(0, 80) : 'รูปความทรงจำ';
@@ -768,7 +822,21 @@ async function handleConfirmDelete() {
   if (id == null) return;
 
   try {
-    if (storage === 'localstorage') {
+    if (storage === 'cloud' && currentUser && firestore) {
+      // ☁️ ลบจาก Firestore + ลบไฟล์รูปใน Storage (แบบเก็บงาน — ลบไฟล์ไม่ได้ก็ข้าม)
+      await firestore.collection('users').doc(currentUser.uid).collection('memories').doc(id).delete();
+
+      const target = cloudMemories.find((m) => m.id === id);
+      if (target && target.photoUrl) {
+        try {
+          await storage.refFromURL(target.photoUrl).delete();
+        } catch (photoErr) {
+          console.warn('ลบไฟล์รูปใน Storage ไม่สำเร็จ (ข้ามได้):', photoErr && photoErr.code);
+        }
+      }
+
+      cloudMemories = cloudMemories.filter((m) => m.id !== id);
+    } else if (storage === 'localstorage') {
       deleteLocalMemory(id); // ลบจากที่เก็บสำรอง
     } else {
       await deleteMemoryRecord(id);
@@ -913,6 +981,12 @@ function bindEvents() {
     event.target.value = '';
     importData(file);
   });
+
+  // 🔑 Firebase Auth: แท็บ + ฟอร์ม + ออกจากระบบ
+  els.tabLogin.addEventListener('click', () => setAuthMode('login'));
+  els.tabRegister.addEventListener('click', () => setAuthMode('register'));
+  els.authForm.addEventListener('submit', handleAuthSubmit);
+  els.logoutBtn.addEventListener('click', handleLogout);
 }
 
 /* =========================================================
@@ -1079,8 +1153,8 @@ async function exportData() {
       };
       if (memory.photo instanceof Blob) {
         item.photo = await blobToDataUrl(memory.photo);
-      } else if (typeof memory.photo === 'string' && memory.photo.indexOf('data:image/') === 0) {
-        item.photo = memory.photo; // รูปจากโหมดสำรอง (เป็น data URL อยู่แล้ว)
+      } else if (typeof memory.photo === 'string' && (memory.photo.indexOf('data:image/') === 0 || memory.photo.indexOf('https://') === 0)) {
+        item.photo = memory.photo; // data URL (สำรอง) หรือ URL รูปจากคลาวด์
       }
       payload.memories.push(item);
     }
@@ -1144,25 +1218,321 @@ async function importData(file) {
 }
 
 /* =========================================================
+   ส่วนที่ 9.8: Firebase — เชื่อมต่อ + Authentication UI
+   ---------------------------------------------------------
+   • ใช้ Firebase compat SDK (โหลดแบบ CDN ใน index.html)
+   • ข้อมูลของแต่ละคนแยกตาม uid: users/{uid}/memories/{id}
+   • ไม่เปิดใช้ Analytics เพื่อคงความเป็นส่วนตัวสูงสุด
+   ========================================================= */
+
+/** เริ่มต้น Firebase (คืนค่า true ถ้าสำเร็จ) */
+function initFirebase() {
+  try {
+    if (typeof firebase === 'undefined') {
+      console.error('โหลด Firebase SDK ไม่สำเร็จ (อาจออฟไลน์หรือถูกบล็อก)');
+      return false;
+    }
+    firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    firestore = firebase.firestore();
+    storage = firebase.storage();
+    return true;
+  } catch (err) {
+    console.error('ตั้งค่า Firebase ไม่สำเร็จ:', err);
+    return false;
+  }
+}
+
+/** ติดตามสถานะล็อกอิน — ตัดสินใจว่าจะแสดงหน้าล็อกอินหรือแอปหลัก */
+function watchAuthState() {
+  auth.onAuthStateChanged((user) => {
+    authStateResolved = true;
+    currentUser = user;
+    if (user) {
+      handleUserSignedIn(user);
+    } else {
+      showAuthView();
+      renderGallery(); // แสดงข้อมูลในเครื่องเบื้องหลังหน้าล็อกอิน
+    }
+  });
+}
+
+/** ล็อกอินแล้ว: ซ่อนหน้าล็อกอิน โหลดข้อมูลจากคลาวด์ + ซิงก์ของเก่าในเครื่อง */
+async function handleUserSignedIn(user) {
+  els.authView.classList.add('hidden');
+  els.logoutBtn.classList.remove('hidden');
+  els.userEmail.textContent = user.email || 'ผู้ใช้ของเรา';
+
+  await loadCloudMemories(user.uid);   // ☁️ ดึงข้อมูลทั้งหมดจาก Firestore
+  await migrateLocalToCloud(user.uid); // 📤 ซิงก์ความทรงจำที่ค้างในเครื่องขึ้นคลาวด์
+  await renderGallery();               // 🌟 รีเฟรชหน้าจอให้ตรงกับคลาวด์
+}
+
+/** ยังไม่ล็อกอิน: แสดงหน้าล็อกอินคลุมทั้งหน้า */
+function showAuthView() {
+  cloudMemories = [];
+  els.authView.classList.remove('hidden');
+  els.logoutBtn.classList.add('hidden');
+}
+
+/** สลับแท็บ เข้าสู่ระบบ / สมัครสมาชิก */
+function setAuthMode(mode) {
+  authMode = mode;
+  els.tabLogin.classList.toggle('active', mode === 'login');
+  els.tabRegister.classList.toggle('active', mode === 'register');
+  els.authSubmitBtn.textContent = mode === 'login' ? '💕 เข้าสู่ระบบ' : '🌸 สมัครสมาชิก';
+  els.authError.classList.add('hidden');
+}
+
+/** แปลง error ของ Firebase Auth เป็นข้อความไทยที่เข้าใจง่าย */
+function getAuthErrorMessage(err) {
+  const code = (err && err.code) || '';
+  switch (code) {
+    case 'auth/invalid-email': return 'รูปแบบอีเมลไม่ถูกต้องนะ 📮';
+    case 'auth/email-already-in-use': return 'อีเมลนี้สมัครไว้แล้ว ลองกด "เข้าสู่ระบบ" ดูนะ';
+    case 'auth/weak-password': return 'รหัสผ่านสั้นไป ใช้อย่างน้อย 6 ตัวอักษรนะ 🔑';
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential': return 'อีเมลหรือรหัสผ่านไม่ถูกต้อง 🥺';
+    case 'auth/too-many-requests': return 'ลองหลายครั้งเกินไป พักสักครู่แล้วค่อยลองใหม่นะ ⏳';
+    case 'auth/network-request-failed': return 'เน็ตไม่ตอบสนอง ตรวจการเชื่อมต่อแล้วลองใหม่นะ 📶';
+    default: return 'เกิดข้อผิดพลาด: ' + ((err && err.message) || 'ไม่ทราบสาเหตุ');
+  }
+}
+
+/** กดปุ่มเข้าสู่ระบบ / สมัครสมาชิก */
+async function handleAuthSubmit(event) {
+  event.preventDefault();
+  if (!auth) {
+    showToast('Firebase ยังโหลดไม่เสร็จ ลองรีเฟรชหน้าอีกครั้งนะ 🥺');
+    return;
+  }
+
+  const email = els.authEmail.value.trim();
+  const password = els.authPassword.value;
+
+  els.authSubmitBtn.disabled = true;
+  els.authError.classList.add('hidden');
+  try {
+    if (authMode === 'register') {
+      await auth.createUserWithEmailAndPassword(email, password);
+      showToast('สมัครสมาชิกสำเร็จ ยินดีต้อนรับนะ 🌸');
+    } else {
+      await auth.signInWithEmailAndPassword(email, password);
+    }
+    // onAuthStateChanged จะจัดการสลับหน้าจอและโหลดข้อมูลให้เอง
+  } catch (err) {
+    console.error('Auth error:', err && err.code, '-', err && err.message);
+    els.authError.textContent = getAuthErrorMessage(err);
+    els.authError.classList.remove('hidden');
+  } finally {
+    els.authSubmitBtn.disabled = false;
+  }
+}
+
+/** ออกจากระบบ */
+async function handleLogout() {
+  try {
+    await auth.signOut();
+    showToast('ออกจากระบบแล้ว แล้วเจอกันใหม่นะ 🌷');
+  } catch (err) {
+    console.error('ออกจากระบบไม่สำเร็จ:', err && err.code, '-', err && err.message);
+    showToast('ออกจากระบบไม่สำเร็จ ลองอีกครั้งนะ 🥺');
+  }
+}
+
+/* =========================================================
+   ส่วนที่ 9.9: คลาวด์ — Firestore + Storage (แยกตาม uid)
+   ---------------------------------------------------------
+   • รูป → Firebase Storage: users/{uid}/{memoryId}.jpg
+   • ข้อความ/วันที่/URL รูป → Firestore: users/{uid}/memories/{id}
+   • ล็อกอินเครื่องไหนก็ได้ ข้อมูลตามไปทุกที่อัตโนมัติ ☁️
+   ========================================================= */
+
+/** อัปโหลดรูป (Blob ที่บีบอัดแล้ว) ขึ้น Firebase Storage แล้วคืน URL */
+async function uploadPhotoToStorage(uid, memoryId, blob) {
+  const photoRef = storage.ref('users/' + uid + '/' + memoryId + '.jpg');
+  const snapshot = await photoRef.put(blob, { contentType: 'image/jpeg' });
+  return await snapshot.ref.getDownloadURL();
+}
+
+/** อัปโหลดรูปจาก data URL (ความทรงจำเก่าในเครื่อง) ขึ้น Storage */
+async function uploadDataUrlToStorage(uid, memoryId, dataUrl) {
+  const blob = await dataUrlToBlob(dataUrl);
+  return await uploadPhotoToStorage(uid, memoryId, blob);
+}
+
+/** บันทึกข้อความ/วันที่/URL รูปลง Firestore (ใช้ memory id เป็น doc id → ซ้ำไม่ซ้อน) */
+async function saveMemoryToFirestore(uid, memory) {
+  const docRef = firestore.collection('users').doc(uid).collection('memories').doc(memory.id);
+  await docRef.set({
+    text: memory.text || '',
+    createdAt: memory.createdAt,
+    photoUrl: memory.photoUrl || null,
+    updatedAt: Date.now(),
+  });
+}
+
+/** ดึงความทรงจำทั้งหมดของผู้ใช้จาก Firestore (เรียงใหม่สุดก่อน) */
+async function loadCloudMemories(uid) {
+  try {
+    els.memoryCount.textContent = 'กำลังโหลดจากคลาวด์...';
+    const snapshot = await firestore
+      .collection('users')
+      .doc(uid)
+      .collection('memories')
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    cloudMemories = snapshot.docs.map((docSnap) => Object.assign({ id: docSnap.id }, docSnap.data()));
+    console.log('☁️ โหลดจากคลาวด์ได้ ' + cloudMemories.length + ' รายการ');
+  } catch (err) {
+    console.error('โหลดจาก Firestore ไม่สำเร็จ:', err && err.code, '-', err && err.message);
+    cloudMemories = [];
+    showToast('โหลดจากคลาวด์ไม่สำเร็จ แสดงข้อมูลที่มีในเครื่องแทน 🥺', 4000);
+  }
+}
+
+/** บันทึก/อัปเดตรายการลง IndexedDB (upsert — ใช้แคชข้อมูลคลาวด์ให้ดูออฟไลน์ได้) */
+function putMemoryRecord(memory) {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      reject(new Error('ฐานข้อมูลยังไม่พร้อม'));
+      return;
+    }
+
+    let tx;
+    try {
+      tx = db.transaction(STORE_NAME, 'readwrite');
+    } catch (err) {
+      reject(err);
+      return;
+    }
+
+    try {
+      tx.objectStore(STORE_NAME).put(memory);
+    } catch (err) {
+      reject(err);
+      return;
+    }
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => {
+      const error = tx.error || new Error('เขียนข้อมูลลง IndexedDB ไม่สำเร็จ');
+      logIndexedDbError('put ข้อมูลไม่สำเร็จ', error);
+      reject(error);
+    };
+    tx.onabort = () => reject(tx.error || new Error('ธุรกรรมถูกยกเลิก'));
+  });
+}
+
+/** ทำเครื่องหมายว่ารายการในเครื่องถูกซิงก์ขึ้นคลาวด์แล้ว (กันซิงก์ซ้ำ) */
+async function markLocalMemorySynced(memory, photoUrl) {
+  if (memory._storage === 'localstorage') {
+    const list = getLocalMemories().map((m) => (
+      m.id === memory.id ? Object.assign({}, m, { synced: true, photoUrl: photoUrl || null }) : m
+    ));
+    try {
+      localStorage.setItem(LOCAL_MEMORIES_KEY, JSON.stringify(list));
+    } catch (err) {
+      console.warn('จดสถานะซิงก์ (localStorage) ไม่สำเร็จ:', err);
+    }
+    return;
+  }
+
+  // แบบ IndexedDB: เก็บไฟล์รูปเดิมไว้ดูออฟไลน์ แต่ใส่ photoUrl + synced กันซิงก์ซ้ำ
+  try {
+    await putMemoryRecord(Object.assign({}, memory, { synced: true, photoUrl: photoUrl || null }));
+  } catch (err) {
+    console.warn('จดสถานะซิงก์ (IndexedDB) ไม่สำเร็จ:', err && err.message);
+  }
+}
+
+/** ซิงก์ความทรงจำที่ค้างในเครื่องขึ้นคลาวด์ (รูปขึ้น Storage, ข้อมูลลง Firestore) */
+async function migrateLocalToCloud(uid) {
+  try {
+    const idbPending = (await getAllMemoriesSafe())
+      .filter((m) => !m.synced)
+      .map((m) => Object.assign({}, m, { _storage: 'indexeddb' }));
+    const localPending = getLocalMemories()
+      .filter((m) => !m.synced)
+      .map((m) => Object.assign({}, m, { _storage: 'localstorage' }));
+    const pending = idbPending.concat(localPending);
+
+    if (!pending.length) return;
+
+    showToast('กำลังซิงก์ความทรงจำในเครื่องขึ้นคลาวด์... ☁️', 3000);
+    let uploaded = 0;
+
+    for (const memory of pending) {
+      try {
+        let photoUrl = memory.photoUrl || null;
+
+        if (!photoUrl && memory.photo instanceof Blob) {
+          photoUrl = await uploadPhotoToStorage(uid, memory.id, memory.photo);
+        } else if (!photoUrl && typeof memory.photo === 'string' && memory.photo.indexOf('data:image/') === 0) {
+          photoUrl = await uploadDataUrlToStorage(uid, memory.id, memory.photo);
+        }
+
+        await saveMemoryToFirestore(uid, {
+          id: memory.id,
+          text: memory.text,
+          createdAt: memory.createdAt,
+          photoUrl: photoUrl,
+        });
+
+        await markLocalMemorySynced(memory, photoUrl);
+        uploaded += 1;
+      } catch (err) {
+        console.warn('☁️ ซิงกรายการไม่สำเร็จ (จะลองใหม่เมื่อเปิดหน้าถัดไป):', memory.id, err && err.message);
+      }
+    }
+
+    await loadCloudMemories(uid); // โหลดใหม่ให้ตรงกับคลาวด์ล่าสุด
+    if (uploaded > 0) {
+      showToast('ซิงก์ขึ้นคลาวด์แล้ว ' + uploaded + ' รายการ ☁️💖', 3500);
+    }
+  } catch (err) {
+    console.error('ซิงก์ขึ้นคลาวด์ไม่สำเร็จ:', err);
+  }
+}
+
+/* =========================================================
    ส่วนที่ 10: เริ่มต้นแอป — โหลดความทรงจำเก่าอัตโนมัติ
    ========================================================= */
 
 async function init() {
-  console.log('💗 Love Memory App v' + APP_VERSION + ' — ทุกอย่างถูกเก็บไว้ในเครื่องของคุณเท่านั้น');
+  console.log('💗 Love Memory App v' + APP_VERSION + ' — ข้อมูลเก็บในบัญชีส่วนตัวของคุณ (Firebase) + แคชในเครื่อง');
   setupTheme();          // 🌙 ใช้ธีมที่จำไว้ทันทีที่เปิดหน้า
   createFloatingHearts(HEART_COUNT);
   bindEvents();
   renderDaysCounter();   // ⏳ แสดงจำนวนวันที่คบกัน (ถ้าตั้งวันแรกไว้)
 
+  // เปิดฐานข้อมูลในเครื่อง (ใช้เป็นแคชออฟไลน์ให้คลาวด์)
   try {
     db = await openDatabase();
     requestPersistentStorage();
-    await renderGallery(); // 💗 ดึงความทรงจำเก่าขึ้นมาแสดงทันทีที่เปิดหน้าเว็บ
   } catch (err) {
     console.error('เปิดฐานข้อมูลไม่สำเร็จ:', err);
     els.saveBtn.disabled = true;
     els.emptyText.textContent = 'เบราว์เซอร์นี้เปิดพื้นที่จัดเก็บไม่ได้ ลองใช้ Chrome / Edge / Safari เวอร์ชันล่าสุดดูนะ 💗';
     showToast('เปิดพื้นที่จัดเก็บ (IndexedDB) ไม่สำเร็จ 🥺', 5000);
+  }
+
+  // ☁️ เชื่อมต่อ Firebase — สำเร็จ → รอสถานะล็อกอินแล้วโหลดข้อมูลอัตโนมัติ
+  //                ล้มเหลว → ใช้โหมดเก็บในเครื่องล้วน (เหมือนเวอร์ชันเดิม)
+  const firebaseReady = initFirebase();
+  if (firebaseReady) {
+    watchAuthState();
+    setTimeout(() => {
+      if (!authStateResolved) {
+        showToast('เชื่อมต่อ Firebase ช้าผิดปกติ ตรวจอินเทอร์เน็ตแล้วรีเฟรชหน้านะ 📶', 5000);
+      }
+    }, 8000);
+  } else {
+    els.authView.classList.add('hidden'); // ซ่อนหน้าล็อกอิน (SDK โหลดไม่มา)
+    await renderGallery();                // แสดงข้อมูลในเครื่องเหมือนเวอร์ชันเดิม
+    showToast('เชื่อมต่อ Firebase ไม่ได้ ใช้โหมดเก็บในเครื่องเท่านั้น 💾', 4500);
   }
 }
 
