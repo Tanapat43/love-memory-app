@@ -15,13 +15,15 @@ const DB_NAME = 'love-memory-db';
 const DB_VERSION = 1;
 const STORE_NAME = 'memories';
 const MAX_FILE_MB = 20;
-const MAX_IMAGE_WIDTH = 600;    // 🖼️ ความกว้างสูงสุดหลังย่อ (เล็กสุดเพื่อมือถือ)
-const MAX_IMAGE_HEIGHT = 600;   // ความสูงสุดหลังย่อ (กันรูปแนวตั้งยาวกินหน่วยความจำ)
-const COMPRESS_QUALITY = 0.5;   // คุณภาพเริ่มต้น JPEG: canvas.toDataURL('image/jpeg', 0.5)
-const MIN_QUALITY = 0.35;       // คุณภาพต่ำสุดที่ยอม (ลดทีละขั้นถ้าไฟล์ยังใหญ่เกินเป้า)
-const TARGET_MAX_KB = 150;      // เป้าหมายขนาดไฟล์หลังบีบอัด (ไม่กี่สิบถึงร้อยกว่า KB)
-const KEEP_ORIGINAL_IF_SMALLER_THAN = 150 * 1024; // ไฟล์เล็กและไม่ต้องย่อ → เก็บต้นฉบับ
-const APP_VERSION = '2.5.0';    // เวอร์ชันแอป (ดูที่ footer + Console เวลา debug บนมือถือ)
+const MAX_IMAGE_WIDTH = 500;    // 🖼️ ความกว้างสูงสุดหลังย่อ (mobile-first)
+const MAX_IMAGE_HEIGHT = 500;   // ความสูงสุดหลังย่อ (กันรูปแนวตั้งยาวกินหน่วยความจำ)
+const COMPRESS_QUALITY = 0.4;   // คุณภาพ JPEG: canvas.toDataURL('image/jpeg', 0.4)
+const MIN_DIMENSION = 60;       // ขนาดเล็กสุดที่ยอมระหว่างการย่อซ้ำ (px)
+const MAX_RESIZE_ATTEMPTS = 8;  // จำนวนรอบสูงสุดของการย่อซ้ำแบบ recursive
+const MAX_DATAURL_CHARS = 200 * 1024; // ความยาว string data URL ไม่เกิน ~200KB
+const KEEP_ORIGINAL_IF_SMALLER_THAN = 100 * 1024; // ไฟล์เล็กและไม่ต้องย่อ → เก็บต้นฉบับ
+const APP_VERSION = '3.0.0';    // เวอร์ชันแอป (ดูที่ footer + Console เวลา debug บนมือถือ)
+const LOCAL_MEMORIES_KEY = 'love-memory-local-memories'; // 🧯 ที่เก็บสำรองเมื่อ IndexedDB ใช้ไม่ได้
 const THEME_STORAGE_KEY = 'love-memory-theme';     // 🌙 จำธีมล่าสุด (เก็บในเครื่องเท่านั้น)
 const ANNIVERSARY_KEY = 'love-memory-anniversary'; // ⏳ วันแรกที่เริ่มคบกัน (เก็บในเครื่องเท่านั้น)
 const HEART_EMOJIS = ['💗', '💖', '💕', '🩷', '💞', '🌸'];
@@ -62,7 +64,8 @@ const els = {
 let db = null;                 // การเชื่อมต่อฐานข้อมูล IndexedDB
 let pendingFile = null;        // รูปที่เลือกไว้ก่อนกดบันทึก
 let previewUrl = null;         // Object URL ของรูปตัวอย่าง
-let pendingDeleteId = null;    // รายการที่รอยืนยันการลบ
+let pendingDeleteId = null;       // รายการที่รอยืนยันการลบ
+let pendingDeleteStorage = 'indexeddb'; // แหล่งจัดเก็บของรายการที่รอลบ (indexeddb/localstorage)
 let toastTimer = null;
 const objectUrls = new Set();  // Object URL ของรูปในแกลเลอรี (คืนหน่วยความจำทีหลัง)
 
@@ -169,6 +172,69 @@ function addMemoryRecord(memory) {
   });
 }
 
+/* =========================================================
+   ส่วนที่ 2.5: ที่เก็บสำรอง (Fallback) ด้วย localStorage
+   ---------------------------------------------------------
+   • ใช้เมื่อ IndexedDB บนมือถือ error หรือเต็ม (QuotaExceededError)
+   • เก็บเป็น JSON array ใน localStorage (รูปฝังเป็น base64)
+   • renderGallery จะรวมข้อมูลจากทั้งสองแหล่งให้อัตโนมัติ
+   • ข้อมูลยังอยู่ในเครื่องผู้ใช้ 100% ตามหลัก Privacy-First
+   ========================================================= */
+
+/** อ่านรายการสำรองจาก localStorage (error → คืน array ว่าง) */
+function getLocalMemories() {
+  try {
+    const raw = localStorage.getItem(LOCAL_MEMORIES_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list : [];
+  } catch (err) {
+    console.error('อ่านข้อมูลสำรองจาก localStorage ไม่สำเร็จ:', err);
+    return [];
+  }
+}
+
+/** บันทึกความทรงจำลง localStorage (รูปแปลงเป็น base64) — error จะ throw ให้ชั้นบนแจ้งต่อ */
+async function saveMemoryToLocalStorage(memory) {
+  const list = getLocalMemories();
+  const item = {
+    id: memory.id,
+    text: memory.text || '',
+    createdAt: memory.createdAt,
+    photo: memory.photo instanceof Blob ? await blobToDataUrl(memory.photo) : null,
+  };
+  list.push(item);
+
+  try {
+    localStorage.setItem(LOCAL_MEMORIES_KEY, JSON.stringify(list));
+  } catch (err) {
+    console.error('❌ localStorage บันทึกไม่สำเร็จ (พื้นที่เต็มหรือถูกปิด):', err && err.name, '-', err && err.message, err);
+    throw err;
+  }
+}
+
+/** ลบรายการที่เก็บสำรองออกจาก localStorage */
+function deleteLocalMemory(id) {
+  const list = getLocalMemories().filter((m) => m.id !== id);
+  try {
+    localStorage.setItem(LOCAL_MEMORIES_KEY, JSON.stringify(list));
+  } catch (err) {
+    console.error('ลบจาก localStorage ไม่สำเร็จ:', err);
+  }
+}
+
+/** บันทึกลง IndexedDB ก่อน — ถ้าพังหรือเต็ม สลับไป localStorage อัตโนมัติ */
+async function saveMemoryWithFallback(memory) {
+  try {
+    await addMemoryRecord(memory);
+    return 'indexeddb';
+  } catch (idbErr) {
+    logIndexedDbError('บันทึกลง IndexedDB ไม่สำเร็จ → สลับไป localStorage ให้อัตโนมัติ', idbErr);
+    await saveMemoryToLocalStorage(memory);
+    console.log('🧯 บันทึกลง localStorage (โหมดสำรอง) สำเร็จ — ผู้ใช้ไม่ต้องเจอข้อความ error');
+    return 'localstorage';
+  }
+}
+
 /** ดึงความทรงจำทั้งหมดออกมาแสดง */
 function getAllMemories() {
   return new Promise((resolve, reject) => {
@@ -177,6 +243,51 @@ function getAllMemories() {
     request.onsuccess = () => resolve(request.result || []);
     request.onerror = () => reject(request.error);
   });
+}
+
+/** ดึงข้อมูลจาก IndexedDB โดยไม่ให้พังทั้งหน้า (error → คืน array ว่าง) */
+async function getAllMemoriesSafe() {
+  if (!db) return [];
+  try {
+    return await getAllMemories();
+  } catch (err) {
+    logIndexedDbError('อ่านข้อมูลจาก IndexedDB ไม่สำเร็จ (จะแสดงเฉพาะข้อมูลสำรอง)', err);
+    return [];
+  }
+}
+
+/** รวมความทรงจำจาก IndexedDB + localStorage (ตัด id ซ้ำ โดยเอา IndexedDB ก่อน) */
+async function collectAllMemories() {
+  const idbList = (await getAllMemoriesSafe()).map((m) => Object.assign({}, m, { _storage: 'indexeddb' }));
+  const localList = getLocalMemories().map((m) => Object.assign({}, m, { _storage: 'localstorage' }));
+
+  const seen = new Set();
+  return idbList.concat(localList).filter((m) => {
+    if (seen.has(m.id)) return false;
+    seen.add(m.id);
+    return true;
+  });
+}
+
+/** เช็คว่ามี id นี้อยู่ใน IndexedDB แล้วหรือยัง */
+function idbHasMemory(id) {
+  return new Promise((resolve) => {
+    if (!db) { resolve(false); return; }
+    try {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const request = tx.objectStore(STORE_NAME).get(id);
+      request.onsuccess = () => resolve(!!request.result);
+      request.onerror = () => resolve(false);
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+/** เช็คว่ามี id นี้อยู่แล้วหรือยัง (ทั้ง 2 แหล่ง) */
+async function memoryExists(id) {
+  if (await idbHasMemory(id)) return true;
+  return getLocalMemories().some((m) => m.id === id);
 }
 
 /** ลบความทรงจำตาม id */
@@ -334,9 +445,9 @@ function compressImage(file) {
 }
 
 /**
- * ย่อ + บีบอัดรูปภาพเป็น Blob ขนาดเล็กมาก (เหมาะกับมือถือ)
- * ขั้นตอน: FileReader → data URL → Image → Canvas ย่อไม่เกิน 600×600
- *          → toDataURL('image/jpeg', 0.5) → ลดคุณภาพทีละขั้นถ้ายังใหญ่
+ * ย่อ + บีบอัดรูปภาพแบบ Mobile-First
+ * 1) ย่อเข้ากรอบ 500×500 แล้วรีดเป็น JPEG quality 0.4
+ * 2) ถ้า string data URL ยังเกิน ~200KB → ย่อซ้ำ (recursive) จนเข้าเป้า
  */
 async function runCompression(file) {
   try {
@@ -363,39 +474,17 @@ async function runCompression(file) {
       return file;
     }
 
-    // 3) วาดลง Canvas ขนาดที่ย่อแล้ว
-    const targetWidth = Math.max(1, Math.round(img.naturalWidth * scale));
-    const targetHeight = Math.max(1, Math.round(img.naturalHeight * scale));
+    // 3) ย่อ + รีด JPEG แบบ recursive จน string data URL ไม่เกิน ~200KB
+    const targetWidth = Math.max(MIN_DIMENSION, Math.round(img.naturalWidth * scale));
+    const targetHeight = Math.max(MIN_DIMENSION, Math.round(img.naturalHeight * scale));
+    const compressedDataUrl = encodeResizedJpeg(img, targetWidth, targetHeight, 0);
 
-    const canvas = document.createElement('canvas');
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
-
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff'; // JPEG ไม่มีความโปร่งใส → รองพื้นขาวกันภาพดำทั้งใบ
-    ctx.fillRect(0, 0, targetWidth, targetHeight);
-    ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-
-    // 4) เข้ารหัส JPEG คุณภาพ 0.5 แล้วลดคุณภาพทีละขั้นถ้ายังใหญ่เกินเป้า
-    let quality = COMPRESS_QUALITY;
-    let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-    if (typeof compressedDataUrl !== 'string' || compressedDataUrl.indexOf('data:image/jpeg') !== 0) {
-      throw new Error('เข้ารหัสรูปภาพไม่สำเร็จ');
-    }
-
-    const targetBytes = TARGET_MAX_KB * 1024;
-    while (compressedDataUrl.length * 0.75 > targetBytes && quality > MIN_QUALITY) {
-      quality = Math.max(MIN_QUALITY, quality - 0.1);
-      compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-    }
-
-    // 5) แปลง data URL กลับเป็น Blob เพื่อเก็บลง IndexedDB
+    // 4) แปลง data URL กลับเป็น Blob เพื่อเก็บลงฐานข้อมูล
     const blob = await dataUrlToBlob(compressedDataUrl);
 
     // 🔍 Debug: เทียบขนาดไฟล์ก่อน-หลังบีบอัด
     console.log('🖼️ Original size vs Compressed size: ' + formatBytes(file.size) + ' → ' + formatBytes(blob.size)
-      + ' | ภาพ: ' + img.naturalWidth + '×' + img.naturalHeight + ' → ' + targetWidth + '×' + targetHeight
-      + ' | quality: ' + quality.toFixed(2));
+      + ' | ภาพ: ' + img.naturalWidth + '×' + img.naturalHeight + ' → ' + targetWidth + '×' + targetHeight);
 
     // ใช้ผลลัพธ์เฉพาะเมื่อเล็กกว่าไฟล์ต้นฉบับจริง ไม่งั้นเก็บต้นฉบับ
     return blob.size > 0 && blob.size < file.size ? blob : file;
@@ -403,6 +492,39 @@ async function runCompression(file) {
     console.warn('บีบอัดรูปไม่สำเร็จ ใช้ไฟล์ต้นฉบับแทน:', err && err.name, '-', err && err.message);
     return file;
   }
+}
+
+/** วาดรูปลง canvas ขนาดที่กำหนด รีดเป็น JPEG 0.4 — ถ้า string ยังเกิน 200KB ให้ย่อซ้ำ (recursive) */
+function encodeResizedJpeg(img, width, height, attempt) {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff'; // JPEG ไม่มีความโปร่งใส → รองพื้นขาวกันภาพดำทั้งใบ
+  ctx.fillRect(0, 0, width, height);
+  ctx.drawImage(img, 0, 0, width, height);
+
+  const dataUrl = canvas.toDataURL('image/jpeg', COMPRESS_QUALITY);
+  if (typeof dataUrl !== 'string' || dataUrl.indexOf('data:image/jpeg') !== 0) {
+    throw new Error('เข้ารหัสรูปภาพไม่สำเร็จ');
+  }
+
+  console.log('🔁 ย่อรอบที่ ' + (attempt + 1) + ': ' + width + '×' + height + ' → data URL ' + dataUrl.length + ' chars');
+
+  const isSmallEnough = dataUrl.length <= MAX_DATAURL_CHARS;
+  const canShrinkMore = width > MIN_DIMENSION && height > MIN_DIMENSION && attempt < MAX_RESIZE_ATTEMPTS;
+
+  if (isSmallEnough || !canShrinkMore) {
+    return dataUrl;
+  }
+
+  // ย่อซ้ำ: ลดขนาดลง 15% ต่อรอบ
+  return encodeResizedJpeg(
+    img,
+    Math.max(MIN_DIMENSION, Math.round(width * 0.85)),
+    Math.max(MIN_DIMENSION, Math.round(height * 0.85)),
+    attempt + 1
+  );
 }
 
 /* =========================================================
@@ -436,11 +558,15 @@ async function handleSave(event) {
       createdAt: Date.now(),
     };
 
-    await addMemoryRecord(memory); // เขียน + commit transaction
+    const storageUsed = await saveMemoryWithFallback(memory); // IDB ก่อน ถ้าพังสลับ localStorage อัตโนมัติ
     savedOk = true;
 
     clearForm();
-    showToast('บันทึกความทรงจำแล้ว 💖');
+    if (storageUsed === 'localstorage') {
+      showToast('บันทึกแล้ว (โหมดสำรองของเครื่อง) 💾', 3500);
+    } else {
+      showToast('บันทึกความทรงจำแล้ว 💖');
+    }
   } catch (err) {
     // 🔍 แจ้ง error ที่เฉพาะเจาะจงลง Console เพื่อวิเคราะห์บนมือถือ
     console.error('❌ บันทึกลง IndexedDB ไม่สำเร็จ');
@@ -485,9 +611,9 @@ function releaseObjectUrls() {
   objectUrls.clear();
 }
 
-/** โหลดความทรงจำทั้งหมดจาก IndexedDB มาแสดง (เรียงใหม่สุดอยู่บน) */
+/** โหลดความทรงจำจาก IndexedDB + localStorage (สำรอง) มาแสดง (เรียงใหม่สุดอยู่บน) */
 async function renderGallery() {
-  const memories = (await getAllMemories()).sort((a, b) => b.createdAt - a.createdAt);
+  const memories = await collectAllMemories();
 
   releaseObjectUrls();
   els.gallery.replaceChildren();
@@ -501,7 +627,7 @@ async function renderGallery() {
   updateStorageInfo();
 }
 
-/** สร้างการ์ดโพลารอยด์ 1 ใบจากข้อมูลความทรงจำ */
+/** รวมข้อมูลจาก IndexedDB + localStorage มาแสดงในการ์ดโพลารอยด์ */
 function createPolaroidCard(memory) {
   const card = document.createElement('figure');
   card.className = 'polaroid';
@@ -520,7 +646,7 @@ function createPolaroidCard(memory) {
   deleteBtn.textContent = '✕';
   deleteBtn.title = 'ลบความทรงจำนี้';
   deleteBtn.setAttribute('aria-label', 'ลบความทรงจำนี้');
-  deleteBtn.addEventListener('click', () => askDelete(memory.id));
+  deleteBtn.addEventListener('click', () => askDelete(memory.id, memory._storage));
 
   // ส่วนรูปภาพ (หรืออิโมจิ ถ้าเป็นบันทึกข้อความเดียว)
   const media = document.createElement('div');
@@ -530,6 +656,13 @@ function createPolaroidCard(memory) {
     const url = URL.createObjectURL(memory.photo);
     objectUrls.add(url);
     img.src = url;
+    img.alt = memory.text ? 'รูปความทรงจำ: ' + memory.text.slice(0, 80) : 'รูปความทรงจำ';
+    img.loading = 'lazy';
+    media.appendChild(img);
+  } else if (typeof memory.photo === 'string' && memory.photo.indexOf('data:image/') === 0) {
+    // รูปจากโหมดสำรอง localStorage (เก็บเป็น data URL)
+    const img = document.createElement('img');
+    img.src = memory.photo;
     img.alt = memory.text ? 'รูปความทรงจำ: ' + memory.text.slice(0, 80) : 'รูปความทรงจำ';
     img.loading = 'lazy';
     media.appendChild(img);
@@ -613,8 +746,9 @@ function observeTimelineItems(items) {
    ========================================================= */
 
 /** เปิดป็อปอัปถามยืนยันก่อนลบ */
-function askDelete(id) {
+function askDelete(id, storage) {
   pendingDeleteId = id;
+  pendingDeleteStorage = storage || 'indexeddb';
   els.deleteModal.classList.remove('hidden');
   els.confirmDelete.focus();
 }
@@ -622,21 +756,27 @@ function askDelete(id) {
 /** ปิดป็อปอัปโดยไม่ลบ */
 function closeDeleteModal() {
   pendingDeleteId = null;
+  pendingDeleteStorage = 'indexeddb';
   els.deleteModal.classList.add('hidden');
 }
 
-/** ยืนยันลบรายการออกจาก IndexedDB */
+/** ยืนยันลบรายการออกจากที่จัดเก็บ (IndexedDB หรือ localStorage สำรอง) */
 async function handleConfirmDelete() {
   const id = pendingDeleteId;
+  const storage = pendingDeleteStorage;
   closeDeleteModal();
   if (id == null) return;
 
   try {
-    await deleteMemoryRecord(id);
+    if (storage === 'localstorage') {
+      deleteLocalMemory(id); // ลบจากที่เก็บสำรอง
+    } else {
+      await deleteMemoryRecord(id);
+    }
     await renderGallery();
     showToast('ลบความทรงจำแล้ว 🌷');
   } catch (err) {
-    console.error('ลบไม่สำเร็จ:', err);
+    console.error('ลบไม่สำเร็จ:', err && err.name, '-', err && err.message);
     showToast('ลบไม่สำเร็จ ลองอีกครั้งนะ 🥺');
   }
 }
@@ -914,17 +1054,6 @@ function dataUrlToBlob(dataUrl) {
   });
 }
 
-/** เพิ่มรายการโดยไม่ทับของเดิม — คืน true ถ้าเพิ่มใหม่, false ถ้า id ซ้ำ */
-function addMemorySafe(memory) {
-  return new Promise((resolve) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).add(memory);
-    tx.oncomplete = () => resolve(true);
-    tx.onerror = () => resolve(false);
-    tx.onabort = () => resolve(false);
-  });
-}
-
 async function exportData() {
   if (!db) {
     showToast('ยังเปิดพื้นที่จัดเก็บไม่ได้ ลองรีเฟรชหน้าก่อนนะ 🥺');
@@ -932,7 +1061,7 @@ async function exportData() {
   }
   els.exportBtn.disabled = true;
   try {
-    const memories = await getAllMemories();
+    const memories = await collectAllMemories(); // รวมทั้ง IndexedDB และ localStorage
     const payload = {
       app: 'love-memory-app',
       version: 1,
@@ -950,6 +1079,8 @@ async function exportData() {
       };
       if (memory.photo instanceof Blob) {
         item.photo = await blobToDataUrl(memory.photo);
+      } else if (typeof memory.photo === 'string' && memory.photo.indexOf('data:image/') === 0) {
+        item.photo = memory.photo; // รูปจากโหมดสำรอง (เป็น data URL อยู่แล้ว)
       }
       payload.memories.push(item);
     }
@@ -987,8 +1118,11 @@ async function importData(file) {
     let added = 0;
     let skipped = 0;
     for (const item of list) {
+      const id = typeof item.id === 'string' && item.id ? item.id : createId();
+      if (await memoryExists(id)) { skipped += 1; continue; }
+
       const memory = {
-        id: typeof item.id === 'string' && item.id ? item.id : createId(),
+        id: id,
         text: typeof item.text === 'string' ? item.text : '',
         photo: null,
         createdAt: Number.isFinite(item.createdAt) ? item.createdAt : Date.now(),
@@ -996,8 +1130,9 @@ async function importData(file) {
       if (typeof item.photo === 'string' && item.photo.indexOf('data:image/') === 0) {
         memory.photo = await dataUrlToBlob(item.photo);
       }
-      const isNew = await addMemorySafe(memory);
-      if (isNew) { added += 1; } else { skipped += 1; }
+
+      await saveMemoryWithFallback(memory); // IndexedDB พังก็มี localStorage รองรับ
+      added += 1;
     }
 
     await renderGallery();
@@ -1013,6 +1148,7 @@ async function importData(file) {
    ========================================================= */
 
 async function init() {
+  console.log('💗 Love Memory App v' + APP_VERSION + ' — ทุกอย่างถูกเก็บไว้ในเครื่องของคุณเท่านั้น');
   setupTheme();          // 🌙 ใช้ธีมที่จำไว้ทันทีที่เปิดหน้า
   createFloatingHearts(HEART_COUNT);
   bindEvents();
