@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    🚀 Space Love Story - Deep Space Theme
    ธีมอวกาศลึกลับ โรแมนติก
    ========================================================= */
@@ -29,7 +29,7 @@ html {
 }
 
 body {
-  font-family: 'Segoe UI', 'Prompt', 'Kanit', sans-serif;
+  font-family: ''Segoe UI'', ''Prompt'', ''Kanit'', sans-serif;
   background: var(--space-dark);
   color: var(--text-light);
   min-height: 100vh;
@@ -79,7 +79,18 @@ body {
 
 /* ===== Floating Hearts ===== */
 .floating-heart {
+  position: absolute;
+  font-size: 1.5rem;
+  animation: floatUp 20s linear infinite;
+  opacity: 0.6;
+}
 
+@keyframes floatUp {
+  0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+}
 /* ===== Hero Section ===== */
 .hero {
   min-height: 100vh;
@@ -108,7 +119,7 @@ body {
 }
 
 .planet-ring::before {
-  content: '🪐';
+  content: ''🪐'';
   font-size: 4rem;
   position: absolute;
   top: 50%;
@@ -149,7 +160,6 @@ body {
   from { opacity: 0; transform: translateY(30px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
 /* ===== Start Button ===== */
 .start-btn {
   background: linear-gradient(135deg, var(--nebula-purple) 0%, var(--nebula-pink) 100%);
@@ -171,9 +181,33 @@ body {
 }
 
 .start-btn::before {
-  content: '';
+  content: '''';
   position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+  animation: shine 3s infinite;
+}
 
+@keyframes shine {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) rotate(45deg); }
+}
+
+.start-btn:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 0 50px rgba(233, 69, 96, 0.6);
+}
+
+.start-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+}
 /* ===== Timeline Section ===== */
 .timeline-section {
   padding: 4rem 1rem;
@@ -237,7 +271,6 @@ body {
   border-radius: 2px;
   margin-top: 0.5rem;
 }
-
 /* ===== Timeline Card ===== */
 .timeline-card {
   background: linear-gradient(135deg, rgba(26, 26, 62, 0.9), rgba(22, 33, 62, 0.9));
@@ -265,7 +298,31 @@ body {
 }
 
 .card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
 
+.timeline-card:hover .card-image img {
+  transform: scale(1.05);
+}
+
+.card-content {
+  padding: 1.5rem;
+}
+
+.card-content h3 {
+  color: var(--glow-cyan);
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+.card-content p {
+  color: var(--text-dim);
+  line-height: 1.7;
+}
 /* ===== Finale Section ===== */
 .finale {
   padding: 4rem 1rem;
@@ -335,7 +392,6 @@ body {
   z-index: 1;
   border-top: 1px solid rgba(157, 78, 221, 0.2);
 }
-
 /* ===== Utility Classes ===== */
 .hidden {
   display: none !important;
@@ -427,69 +483,4 @@ body {
 ::selection {
   background: var(--nebula-purple);
   color: var(--star-white);
-}
-
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.timeline-card:hover .card-image img {
-  transform: scale(1.05);
-}
-
-.card-content {
-  padding: 1.5rem;
-}
-
-.card-content h3 {
-  color: var(--glow-cyan);
-  font-size: 1.3rem;
-  margin-bottom: 0.5rem;
-  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
-}
-
-.card-content p {
-  color: var(--text-dim);
-  line-height: 1.7;
-}
-
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
-  animation: shine 3s infinite;
-}
-
-@keyframes shine {
-  0% { transform: translateX(-100%) rotate(45deg); }
-  100% { transform: translateX(100%) rotate(45deg); }
-}
-
-.start-btn:hover {
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: 0 0 50px rgba(233, 69, 96, 0.6);
-}
-
-.start-btn:active {
-  transform: translateY(0) scale(0.98);
-}
-
-.btn-icon {
-  font-size: 1.2rem;
-}
-
-  position: absolute;
-  font-size: 1.5rem;
-  animation: floatUp 20s linear infinite;
-  opacity: 0.6;
-}
-
-@keyframes floatUp {
-  0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-  10% { opacity: 0.6; }
-  90% { opacity: 0.6; }
-  100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
 }
