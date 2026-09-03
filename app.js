@@ -1,7 +1,7 @@
 /*
  * =========================================================
- *  💕 Love Story - Interactive Timeline
- *  เว็บบอกรักแฟน - Static Frontend 100%
+ *  🚀 Space Love Story - Interactive Timeline
+ *  เว็บบอกรักแฟนธีมอวกาศ
  * =========================================================
  */
 
@@ -12,27 +12,48 @@ const startBtn = document.getElementById('startBtn');
 const hero = document.getElementById('hero');
 const timelineSection = document.getElementById('timelineSection');
 const finale = document.getElementById('finale');
-const heartsBg = document.getElementById('heartsBg');
+const starsBg = document.getElementById('starsBg');
 const restartBtn = document.getElementById('restartBtn');
 
-/* ========== สร้างหัวใจลอยพื้นหลัง ========== */
+/* ========== สร้างดาวระยิบระยับพื้นหลัง ========== */
+function createStars() {
+  const starCount = 150;
+  
+  for (let i = 0; i < starCount; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    star.style.left = Math.random() * 100 + '%';
+    star.style.top = Math.random() * 100 + '%';
+    star.style.animationDelay = Math.random() * 3 + 's';
+    star.style.animationDuration = (2 + Math.random() * 3) + 's';
+    
+    // สุ่มขนาดดาว
+    const size = Math.random() * 2 + 1;
+    star.style.width = size + 'px';
+    star.style.height = size + 'px';
+    
+    starsBg.appendChild(star);
+  }
+}
+
+/* ========== สร้างหัวใจลอยอวกาศ ========== */
 function createFloatingHearts() {
-  const heartEmojis = ['💗', '💖', '💕', '🩷', '💞', '🌸', '✨', '🦋'];
-  const heartCount = 20;
+  const heartEmojis = ['💗', '💖', '💕', '🩷', '💞', '✨', '🌟', '💫', '🦋', '🪐'];
+  const heartCount = 15;
 
   for (let i = 0; i < heartCount; i++) {
     const heart = document.createElement('span');
     heart.className = 'floating-heart';
     heart.textContent = heartEmojis[Math.floor(Math.random() * heartEmojis.length)];
     heart.style.left = Math.random() * 100 + '%';
-    heart.style.animationDelay = Math.random() * 15 + 's';
-    heart.style.animationDuration = (15 + Math.random() * 10) + 's';
+    heart.style.animationDelay = Math.random() * 20 + 's';
+    heart.style.animationDuration = (15 + Math.random() * 15) + 's';
     heart.style.fontSize = (1 + Math.random() * 2) + 'rem';
-    heartsBg.appendChild(heart);
+    starsBg.appendChild(heart);
   }
 }
 
-/* ========== เริ่มต้นเรื่องราวความรัก ========== */
+/* ========== เริ่มต้นการเดินทางอวกาศ ========== */
 function startStory() {
   // ซ่อน Hero
   hero.classList.add('hidden');
@@ -57,7 +78,7 @@ function animateTimelineItems() {
   items.forEach((item, index) => {
     setTimeout(() => {
       item.classList.add('visible');
-    }, index * 400); // แต่ละอันจะแสดงที่ละ 400ms
+    }, index * 400);
   });
 }
 
@@ -79,7 +100,7 @@ function setupScrollObserver() {
   items.forEach(item => observer.observe(item));
 }
 
-/* ========== กลับไปดูอีกครั้ง ========== */
+/* ========== เดินทางกลับไปอีกครั้ง ========== */
 function restartStory() {
   // ซ่อน Timeline และ Finale
   timelineSection.hidden = true;
@@ -108,7 +129,8 @@ if (restartBtn) {
 
 /* ========== เริ่มต้น ========== */
 document.addEventListener('DOMContentLoaded', () => {
+  createStars();
   createFloatingHearts();
   setupScrollObserver();
-  console.log('💕 Love Story - พร้อมบอกรักแฟนแล้ว!');
+  console.log('🚀 Space Love Story - พร้อมเดินทางท่องอวกาศแล้ว!');
 });
