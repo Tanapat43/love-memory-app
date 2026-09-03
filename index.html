@@ -14,21 +14,28 @@
   <div class="stars-bg" id="starsBg" aria-hidden="true"></div>
   <div class="nebula" aria-hidden="true"></div>
 
-  <!-- ส่วนบนสุด: ปุ่มสตาร์ท -->
+  <!-- ===== Hero Section หน้าแรกเต็มจอ ===== -->
   <section class="hero" id="hero">
     <div class="hero-content">
-      <div class="planet-ring" aria-hidden="true"></div>
-      <h1 class="hero-title">
-        <span class="title-glow">🚀 Space Love Story 💫</span>
-      </h1>
-      <p class="hero-subtitle">ความรักของเรากว้างใหญ่เท่าจักรวาล...</p>
-      <button class="start-btn" id="startBtn">
-        <span class="btn-text">✨ สตาร์ทการเดินทางอวกาศของเรา</span>
-        <span class="btn-icon">🚀💕🌌</span>
-      </button>
+      <!-- รูปภาพปก -->
+      <div class="hero-image-container">
+        <img src="images/cover_photo.jpg" alt="รูปคู่ของเรา" class="hero-image" onerror="this.parentElement.innerHTML='<div class=\'placeholder-image\'>💕<br>ใส่รูปคู่ของเรา<br>ที่ images/cover_photo.jpg</div>'" />
+      </div>
+      
+      <!-- หัวข้อและปุ่ม -->
+      <div class="hero-text">
+        <h1 class="hero-title">
+          <span class="title-glow">🚀 Space Love Story 💫</span>
+        </h1>
+        <p class="hero-subtitle">ความรักของเรากว้างใหญ่เท่าจักรวาล...</p>
+        <button class="start-btn" id="startBtn">
+          <span class="btn-text">✨ สตาร์ทการเดินทางอวกาศของเรา</span>
+          <span class="btn-icon">🚀💕🌌</span>
+        </button>
+      </div>
     </div>
   </section>
-  <!-- Timeline เรื่องราวความรักอวกาศ -->
+  <!-- ===== Timeline เรื่องราวความรักอวกาศ ===== -->
   <section class="timeline-section" id="timelineSection" hidden>
     <div class="timeline">
       
@@ -82,6 +89,7 @@
           </div>
         </div>
       </div>
+
       <!-- โหนด 4 -->
       <div class="timeline-item" data-aos="fade-up">
         <div class="timeline-connector">
@@ -152,7 +160,7 @@
 
     </div>
   </section>
-  <!-- ส่วนล่างสุด: ข้อความสรุป -->
+  <!-- ===== ส่วนล่างสุด: ข้อความสรุป ===== -->
   <section class="finale" id="finale" hidden>
     <div class="finale-card">
       <div class="finale-stars">⭐💫🌟💫⭐</div>

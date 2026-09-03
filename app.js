@@ -1,4 +1,4 @@
-/*
+﻿/*
  * =========================================================
  *  🚀 Space Love Story - Interactive Timeline
  *  เว็บบอกรักแฟนธีมอวกาศ
@@ -52,25 +52,65 @@ function createFloatingHearts() {
     starsBg.appendChild(heart);
   }
 }
-
-/* ========== เริ่มต้นการเดินทางอวกาศ ========== */
-function startStory() {
-  // ซ่อน Hero
-  hero.classList.add('hidden');
-  
-  // แสดง Timeline
+/* ========== Smooth Scroll ไปยัง Timeline ========== */
+function smoothScrollToTimeline() {
+  // แสดง Timeline ก่อน
   timelineSection.hidden = false;
   finale.hidden = false;
   
-  // เริ่มแอนิเมชั่น Timeline Items
-  animateTimelineItems();
-  
-  // เลื่อนไปที่ Timeline
-  setTimeout(() => {
-    timelineSection.scrollIntoView({ behavior: 'smooth' });
-  }, 100);
+  // ใช้ requestAnimationFrame เพื่อให้ DOM อัปเดตก่อน scroll
+  requestAnimationFrame(() => {
+    const targetPosition = timelineSection.offsetTop - 20; // ห่างจากบน 20px
+    
+    // ใช้ custom smooth scroll
+    const startPosition = window.pageYOffset;
+    const distance = targetPosition - startPosition;
+    const duration = 1500; // 1.5 วินาที
+    let startTime = null;
+    
+    function animationScroll(currentTime) {
+      if (startTime === null) startTime = currentTime;
+      const timeElapsed = currentTime - startTime;
+      const progress = Math.min(timeElapsed / duration, 1);
+      
+      // ใช้ easing function (easeInOutCubic)
+      const ease = progress < 0.5 
+        ? 4 * progress * progress * progress 
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      
+      window.scrollTo(0, startPosition + distance * ease);
+      
+      if (timeElapsed < duration) {
+        requestAnimationFrame(animationScroll);
+      } else {
+        // เมื่อ scroll เสร็จ ให้เริ่มแอนิเมชั่น Timeline Items
+        animateTimelineItems();
+      }
+    }
+    
+    requestAnimationFrame(animationScroll);
+  });
 }
 
+/* ========== เริ่มต้นการเดินทางอวกาศ ========== */
+function startStory() {
+  // ซ่อน Hero พร้อมแอนิเมชั่น
+  hero.style.opacity = '0';
+  hero.style.transform = 'translateY(-50px)';
+  hero.style.transition = 'all 0.8s ease-out';
+  
+  setTimeout(() => {
+    hero.classList.add('hidden');
+    // รีเซ็ต style สำหรับกรณี restart
+    hero.style.opacity = '';
+    hero.style.transform = '';
+  }, 800);
+  
+  // Smooth scroll ไป Timeline
+  setTimeout(() => {
+    smoothScrollToTimeline();
+  }, 300);
+}
 /* ========== แอนิเมชั่น Timeline Items ========== */
 function animateTimelineItems() {
   const items = document.querySelectorAll('.timeline-item');
@@ -78,7 +118,7 @@ function animateTimelineItems() {
   items.forEach((item, index) => {
     setTimeout(() => {
       item.classList.add('visible');
-    }, index * 400);
+    }, index * 300); // แต่ละอันจะแสดงที่ละ 300ms
   });
 }
 
