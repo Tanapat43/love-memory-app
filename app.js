@@ -5,20 +5,138 @@
    API-based version using Vercel + MongoDB Atlas
    ========================================================= */
 
-const API_BASE_URL = 'https://your-vercel-app.vercel.app';
-const API_ENDPOINT = API_BASE_URL + '/api/memories';
+// ใช้ CONFIG จาก config.js
+var CONFIG = (typeof window !== 'undefined' && window.CONFIG) ? window.CONFIG : {
+  API_BASE_URL: 'https://your-vercel-app.vercel.app',
+  APP_VERSION: '4.0.0',
+  MAX_FILE_MB: 20,
+  MAX_IMAGE_WIDTH: 500,
+  MAX_IMAGE_HEIGHT: 500,
+  COMPRESS_QUALITY: 0.4,
+  LOCAL_CACHE_KEY: 'love-memory-cache',
+  THEME_STORAGE_KEY: 'love-memory-theme',
+  ANNIVERSARY_KEY: 'love-memory-anniversary',
+  AUTH_KEY: 'love-memory-auth',
+  HEART_EMOJIS: ['\ud83d\udc97', '\ud83d\udc96', '\ud83d\udc95', '\ud83e\ude77', '\ud83d\udc9e', '\ud83c\udf38'],
+  HEART_COUNT: 16
+};
 
-const MAX_FILE_MB = 20;
-const MAX_IMAGE_WIDTH = 500;
-const MAX_IMAGE_HEIGHT = 500;
-const COMPRESS_QUALITY = 0.4;
-const APP_VERSION = '4.0.0';
-const LOCAL_CACHE_KEY = 'love-memory-cache';
-const THEME_STORAGE_KEY = 'love-memory-theme';
-const ANNIVERSARY_KEY = 'love-memory-anniversary';
-const HEART_EMOJIS = ['\ud83d\udc97', '\ud83d\udc96', '\ud83d\udc95', '\ud83e\ude77', '\ud83d\udc9e', '\ud83c\udf38'];
-const HEART_COUNT = 16;
+const API_ENDPOINT = CONFIG.API_BASE_URL + '/api/memories';
+const MAX_FILE_MB = CONFIG.MAX_FILE_MB;
+const MAX_IMAGE_WIDTH = CONFIG.MAX_IMAGE_WIDTH;
+const MAX_IMAGE_HEIGHT = CONFIG.MAX_IMAGE_HEIGHT;
+const COMPRESS_QUALITY = CONFIG.COMPRESS_QUALITY;
+const APP_VERSION = CONFIG.APP_VERSION;
+const LOCAL_CACHE_KEY = CONFIG.LOCAL_CACHE_KEY;
+const THEME_STORAGE_KEY = CONFIG.THEME_STORAGE_KEY;
+const ANNIVERSARY_KEY = CONFIG.ANNIVERSARY_KEY;
+const AUTH_KEY = CONFIG.AUTH_KEY;
+const HEART_EMOJIS = CONFIG.HEART_EMOJIS;
+const HEART_COUNT = CONFIG.HEART_COUNT;
+/* ========== Authentication System ========== */
 
+// ตรวจสอบว่าล็อกอินอยู่หรือไม่
+function isLoggedIn() {
+  try {
+    return localStorage.getItem(AUTH_KEY) === 'true';
+  } catch (e) {
+    return false;
+  }
+}
+
+// เข้าสู่ระบบ (PIN-based Auth)
+function login(pin) {
+  try {
+    // ถ้ายังไม่มี PIN ที่บันทึกไว้ ให้ตั้ง PIN นี้เป็นค่าเริ่มต้น
+    var savedPin = localStorage.getItem('love-memory-pin');
+    if (!savedPin) {
+      // ครั้งแรก - บันทึก PIN ที่กรอก
+      localStorage.setItem('love-memory-pin', pin);
+      localStorage.setItem(AUTH_KEY, 'true');
+      return { success: true, message: 'ตั้งรหัสผ่านสำเร็จ! ยินดีต้อนรับ 💕' };
+    }
+    // ตรวจสอบ PIN
+    if (pin === savedPin) {
+      localStorage.setItem(AUTH_KEY, 'true');
+      return { success: true, message: 'เข้าสู่ระบบสำเร็จ 💕' };
+    }
+    return { success: false, message: 'รหัสผ่านไม่ถูกต้อง ลองใหม่นะ 🥺' };
+  } catch (e) {
+    return { success: false, message: 'เกิดข้อผิดพลาด: ' + e.message };
+  }
+}
+
+// ออกจากระบบ
+function logout() {
+  try {
+    localStorage.removeItem(AUTH_KEY);
+  } catch (e) {}
+  showAuthView();
+}
+
+// แสดงหน้า Login
+function showAuthView() {
+  var authView = document.getElementById('authView');
+  if (authView) authView.classList.remove('hidden');
+  
+  // ซ่อนส่วนหลัก
+  var header = document.querySelector('.header');
+  var container = document.querySelector('.container');
+  if (header) header.style.display = 'none';
+  if (container) container.style.display = 'none';
+}
+
+// แสดงหน้าหลัก (หลัง Login สำเร็จ)
+function showMainView() {
+  var authView = document.getElementById('authView');
+  if (authView) authView.classList.add('hidden');
+  
+  // แสดงส่วนหลัก
+  var header = document.querySelector('.header');
+  var container = document.querySelector('.container');
+  if (header) header.style.display = '';
+  if (container) container.style.display = '';
+}
+
+// จัดการการส่งฟอร์ม Login
+function handleAuthSubmit(e) {
+  e.preventDefault();
+  
+  var pinInput = document.getElementById('authPassword');
+  var errorEl = document.getElementById('authError');
+  var submitBtn = document.getElementById('authSubmitBtn');
+  
+  var pin = pinInput.value.trim();
+  
+  if (!pin || pin.length < 4) {
+    if (errorEl) {
+      errorEl.textContent = 'กรุณาใส่รหัสผ่านอย่างน้อย 4 ตัว';
+      errorEl.classList.remove('hidden');
+    }
+    return;
+  }
+  
+  // แสดงสถานะกำลังประมวลผล
+  if (submitBtn) submitBtn.textContent = '⏳ กำลังตรวจสอบ...';
+  
+  // จำลอง delay เล็กน้อย
+  setTimeout(function() {
+    var result = login(pin);
+    
+    if (result.success) {
+      showToast(result.message);
+      showMainView();
+      // โหลดข้อมูลหลังเข้าสู่ระบบ
+      loadMemories();
+    } else {
+      if (errorEl) {
+        errorEl.textContent = result.message;
+        errorEl.classList.remove('hidden');
+      }
+      if (submitBtn) submitBtn.textContent = '💕 เข้าสู่ระบบ';
+    }
+  }, 500);
+}
 const els = {
   form: document.getElementById('memoryForm'),
   photoInput: document.getElementById('photoInput'),
@@ -47,6 +165,8 @@ const els = {
   clearAnniversary: document.getElementById('clearAnniversary'),
   exportBtn: document.getElementById('exportBtn'),
   importInput: document.getElementById('importInput'),
+  authForm: document.getElementById('authForm'),
+  logoutBtn: document.getElementById('logoutBtn'),
 };
 
 let allMemories = [];
@@ -147,24 +267,26 @@ async function loadMemories() {
     } else {
       allMemories = [];
       renderGallery();
-      updateStorageInfo('ไม่สามารถเชื่อมต่อ API ได้');
+      updateStorageInfo('ไม่สามารถเชื่อมต่อ API - ตรวจสอบ Vercel URL');
     }
   }
 }
 
 function showLoadingState() {
-  els.gallery.innerHTML = '<li class="loading-state">กำลังโหลดความทรงจำ...</li>';
-  els.emptyState.classList.add('hidden');
+  if (els.gallery) els.gallery.innerHTML = '<li class="loading-state">กำลังโหลดความทรงจำ...</li>';
+  if (els.emptyState) els.emptyState.classList.add('hidden');
 }
+
 function renderGallery() {
+  if (!els.gallery) return;
   els.gallery.innerHTML = '';
   if (allMemories.length === 0) {
-    els.emptyState.classList.remove('hidden');
-    els.memoryCount.textContent = '';
+    if (els.emptyState) els.emptyState.classList.remove('hidden');
+    if (els.memoryCount) els.memoryCount.textContent = '';
     return;
   }
-  els.emptyState.classList.add('hidden');
-  els.memoryCount.textContent = '(' + allMemories.length + ')';
+  if (els.emptyState) els.emptyState.classList.add('hidden');
+  if (els.memoryCount) els.memoryCount.textContent = '(' + allMemories.length + ')';
   allMemories.forEach((memory, index) => {
     var li = document.createElement('li');
     li.className = 'timeline-item ' + (index % 2 === 0 ? 'left' : 'right');
@@ -213,14 +335,17 @@ function updateStorageInfo(message) {
 
 async function handleSaveMemory(e) {
   e.preventDefault();
+  if (!els.memoryText) return;
   var text = els.memoryText.value.trim();
   var imageData = currentImageData;
   if (!text && !imageData) {
     showToast('กรุณาเพิ่มรูปภาพหรือข้อความอย่างน้อย 1 อย่าง');
     return;
   }
-  els.saveBtn.disabled = true;
-  els.saveBtn.textContent = 'กำลังบันทึก...';
+  if (els.saveBtn) {
+    els.saveBtn.disabled = true;
+    els.saveBtn.textContent = 'กำลังบันทึก...';
+  }
   var memoryData = { image: imageData || '', text: text, date: new Date().toISOString().split('T')[0] };
   var result = await saveMemoryToAPI(memoryData);
   if (result.success) {
@@ -230,28 +355,30 @@ async function handleSaveMemory(e) {
   } else {
     showToast('เกิดข้อผิดพลาด: ' + (result.message || 'ไม่สามารถบันทึกได้'));
   }
-  els.saveBtn.disabled = false;
-  els.saveBtn.textContent = 'บันทึกความทรงจำ';
+  if (els.saveBtn) {
+    els.saveBtn.disabled = false;
+    els.saveBtn.textContent = 'บันทึกความทรงจำ';
+  }
 }
 
 function resetForm() {
-  els.form.reset();
+  if (els.form) els.form.reset();
   currentImageData = null;
-  els.previewWrap.classList.add('hidden');
-  els.dropZone.classList.remove('has-image');
-  els.dropText.textContent = 'แตะเพื่อเลือกรูปภาพ';
+  if (els.previewWrap) els.previewWrap.classList.add('hidden');
+  if (els.dropZone) els.dropZone.classList.remove('has-image');
+  if (els.dropText) els.dropText.textContent = 'แตะเพื่อเลือกรูปภาพ';
 }
 
 /* ========== Delete Memory ========== */
 
 function openDeleteModal(memoryId) {
   pendingDeleteId = memoryId;
-  els.deleteModal.classList.remove('hidden');
+  if (els.deleteModal) els.deleteModal.classList.remove('hidden');
 }
 
 function closeDeleteModal() {
   pendingDeleteId = null;
-  els.deleteModal.classList.add('hidden');
+  if (els.deleteModal) els.deleteModal.classList.add('hidden');
 }
 
 async function handleConfirmDelete() {
@@ -305,10 +432,10 @@ async function processImageFile(file) {
       dataUrl = await resizeImage(dataUrl, MAX_IMAGE_WIDTH, MAX_IMAGE_HEIGHT, COMPRESS_QUALITY);
     }
     currentImageData = dataUrl;
-    els.previewImg.src = dataUrl;
-    els.previewWrap.classList.remove('hidden');
-    els.dropZone.classList.add('has-image');
-    els.dropText.textContent = 'เลือกรูปแล้ว';
+    if (els.previewImg) els.previewImg.src = dataUrl;
+    if (els.previewWrap) els.previewWrap.classList.remove('hidden');
+    if (els.dropZone) els.dropZone.classList.add('has-image');
+    if (els.dropText) els.dropText.textContent = 'เลือกรูปแล้ว';
   } catch (error) {
     showToast('ไม่สามารถประมวลผลรูปภาพได้');
   }
@@ -321,28 +448,31 @@ async function handleFileSelect(e) {
 
 function handleRemovePreview() {
   currentImageData = null;
-  els.previewWrap.classList.add('hidden');
-  els.dropZone.classList.remove('has-image');
-  els.dropText.textContent = 'แตะเพื่อเลือกรูปภาพ';
-  els.photoInput.value = '';
+  if (els.previewWrap) els.previewWrap.classList.add('hidden');
+  if (els.dropZone) els.dropZone.classList.remove('has-image');
+  if (els.dropText) els.dropText.textContent = 'แตะเพื่อเลือกรูปภาพ';
+  if (els.photoInput) els.photoInput.value = '';
 }
 
-function handleDragOver(e) { e.preventDefault(); els.dropZone.classList.add('drag-over'); }
-function handleDragLeave(e) { e.preventDefault(); els.dropZone.classList.remove('drag-over'); }
-function handleDrop(e) { e.preventDefault(); els.dropZone.classList.remove('drag-over'); var files = e.dataTransfer.files; if (files.length > 0) processImageFile(files[0]); }
+function handleDragOver(e) { e.preventDefault(); if (els.dropZone) els.dropZone.classList.add('drag-over'); }
+function handleDragLeave(e) { e.preventDefault(); if (els.dropZone) els.dropZone.classList.remove('drag-over'); }
+function handleDrop(e) { e.preventDefault(); if (els.dropZone) els.dropZone.classList.remove('drag-over'); var files = e.dataTransfer.files; if (files.length > 0) processImageFile(files[0]); }
 /* ========== Theme ========== */
 
 function loadTheme() {
   try {
     var saved = localStorage.getItem(THEME_STORAGE_KEY);
-    if (saved === 'dark') { document.body.classList.add('dark-mode'); els.themeToggle.textContent = 'Sun'; }
+    if (saved === 'dark') {
+      document.body.classList.add('dark-mode');
+      if (els.themeToggle) els.themeToggle.textContent = 'Sun';
+    }
   } catch (e) {}
 }
 
 function toggleTheme() {
   var isDark = document.body.classList.toggle('dark-mode');
   try { localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light'); } catch (e) {}
-  els.themeToggle.textContent = isDark ? 'Sun' : 'Moon';
+  if (els.themeToggle) els.themeToggle.textContent = isDark ? 'Sun' : 'Moon';
 }
 
 /* ========== Anniversary Counter ========== */
@@ -351,24 +481,24 @@ function getAnniversary() { try { return localStorage.getItem(ANNIVERSARY_KEY); 
 
 function renderDaysCounter() {
   var stored = getAnniversary();
-  els.anniversaryInput.value = stored || '';
-  els.clearAnniversary.hidden = !stored;
+  if (els.anniversaryInput) els.anniversaryInput.value = stored || '';
+  if (els.clearAnniversary) els.clearAnniversary.hidden = !stored;
   if (!stored) {
-    els.daysText.textContent = 'ตั้งวันแรกที่เริ่มคบกันด้านล่าง แล้วเดี๋ยวเราช่วยนับวันให้นะ';
+    if (els.daysText) els.daysText.textContent = 'ตั้งวันแรกที่เริ่มคบกันด้านล่าง';
     return;
   }
   var parts = stored.split('-').map(Number);
   var start = new Date(parts[0], parts[1] - 1, parts[2]);
   var today = new Date(); today.setHours(0, 0, 0, 0);
   var diffDays = Math.floor((today - start) / 86400000);
-  if (isNaN(diffDays)) { els.daysText.textContent = 'วันที่ไม่ถูกต้อง'; }
-  else if (diffDays < 0) { els.daysText.textContent = 'วันแรกยังอยู่ข้างหน้า'; }
-  else if (diffDays === 0) { els.daysText.textContent = 'วันนี้คือวันแรกของเรา!'; }
-  else { els.daysText.textContent = 'เราคบกันมาแล้ว ' + diffDays.toLocaleString('th-TH') + ' วัน'; }
+  if (isNaN(diffDays)) { if (els.daysText) els.daysText.textContent = 'วันที่ไม่ถูกต้อง'; }
+  else if (diffDays < 0) { if (els.daysText) els.daysText.textContent = 'วันแรกยังอยู่ข้างหน้า'; }
+  else if (diffDays === 0) { if (els.daysText) els.daysText.textContent = 'วันนี้คือวันแรกของเรา!'; }
+  else { if (els.daysText) els.daysText.textContent = 'เราคบกันมาแล้ว ' + diffDays.toLocaleString('th-TH') + ' วัน'; }
 }
 
 function handleAnniversaryChange() {
-  var value = els.anniversaryInput.value;
+  var value = els.anniversaryInput ? els.anniversaryInput.value : '';
   try { if (value) { localStorage.setItem(ANNIVERSARY_KEY, value); showToast('บันทึกวันแรกไว้แล้ว'); } else { localStorage.removeItem(ANNIVERSARY_KEY); } } catch (e) {}
   renderDaysCounter();
 }
@@ -401,12 +531,13 @@ async function handleImport(e) {
     showToast('Import สำเร็จ ' + importedCount + ' รายการ');
     await loadMemories();
   } catch (error) { showToast('Import ไม่สำเร็จ: ' + error.message); }
-  els.importInput.value = '';
+  if (els.importInput) els.importInput.value = '';
 }
 
 /* ========== UI Helpers ========== */
 
 function showToast(message) {
+  if (!els.toast) return;
   els.toast.textContent = message;
   els.toast.classList.add('show');
   setTimeout(function() { els.toast.classList.remove('show'); }, 3000);
@@ -428,36 +559,73 @@ function createFloatingHearts() {
 /* ========== Initialization ========== */
 
 function bindEvents() {
-  els.form.addEventListener('submit', handleSaveMemory);
-  els.photoInput.addEventListener('change', handleFileSelect);
-  els.removePreview.addEventListener('click', handleRemovePreview);
-  els.dropZone.addEventListener('dragover', handleDragOver);
-  els.dropZone.addEventListener('dragleave', handleDragLeave);
-  els.dropZone.addEventListener('drop', handleDrop);
-  els.cancelDelete.addEventListener('click', closeDeleteModal);
-  els.confirmDelete.addEventListener('click', handleConfirmDelete);
-  els.deleteModal.addEventListener('click', function(e) { if (e.target === els.deleteModal) closeDeleteModal(); });
-  els.themeToggle.addEventListener('click', toggleTheme);
-  els.anniversaryInput.addEventListener('change', handleAnniversaryChange);
-  els.clearAnniversary.addEventListener('click', handleAnniversaryClear);
-  els.exportBtn.addEventListener('click', handleExport);
-  els.importInput.addEventListener('change', handleImport);
-  document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && !els.deleteModal.classList.contains('hidden')) closeDeleteModal(); });
+  // Auth form
+  if (els.authForm) els.authForm.addEventListener('submit', handleAuthSubmit);
+  
+  // Memory form
+  if (els.form) els.form.addEventListener('submit', handleSaveMemory);
+  
+  // Image upload
+  if (els.photoInput) els.photoInput.addEventListener('change', handleFileSelect);
+  if (els.removePreview) els.removePreview.addEventListener('click', handleRemovePreview);
+  
+  // Drag & Drop
+  if (els.dropZone) {
+    els.dropZone.addEventListener('dragover', handleDragOver);
+    els.dropZone.addEventListener('dragleave', handleDragLeave);
+    els.dropZone.addEventListener('drop', handleDrop);
+  }
+  
+  // Delete modal
+  if (els.cancelDelete) els.cancelDelete.addEventListener('click', closeDeleteModal);
+  if (els.confirmDelete) els.confirmDelete.addEventListener('click', handleConfirmDelete);
+  if (els.deleteModal) els.deleteModal.addEventListener('click', function(e) { if (e.target === els.deleteModal) closeDeleteModal(); });
+  
+  // Theme toggle
+  if (els.themeToggle) els.themeToggle.addEventListener('click', toggleTheme);
+  
+  // Logout
+  if (els.logoutBtn) els.logoutBtn.addEventListener('click', logout);
+  
+  // Anniversary
+  if (els.anniversaryInput) els.anniversaryInput.addEventListener('change', handleAnniversaryChange);
+  if (els.clearAnniversary) els.clearAnniversary.addEventListener('click', handleAnniversaryClear);
+  
+  // Export/Import
+  if (els.exportBtn) els.exportBtn.addEventListener('click', handleExport);
+  if (els.importInput) els.importInput.addEventListener('change', handleImport);
+  
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeDeleteModal(); });
 }
 
 async function init() {
   console.log('Love Memory App v' + APP_VERSION + ' (API Mode)');
   console.log('API Endpoint: ' + API_ENDPOINT);
+  
+  // ผูก events
   bindEvents();
+  
+  // โหลดธีม
   loadTheme();
+  
+  // สร้างหัวใจลอย
   createFloatingHearts();
-  renderDaysCounter();
-  await loadMemories();
+  
+  // ตรวจสอบสถานะล็อกอิน
+  if (isLoggedIn()) {
+    // ล็อกอินแล้ว - แสดงหน้าหลัก
+    showMainView();
+    await loadMemories();
+  } else {
+    // ยังไม่ล็อกอิน - แสดงหน้า Login
+    showAuthView();
+  }
 }
 
+// เริ่มทำงานเมื่อ DOM พร้อม
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
   init();
 }
-

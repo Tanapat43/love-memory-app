@@ -9,7 +9,7 @@ const CONFIG = {
   API_BASE_URL: 'https://your-vercel-app.vercel.app',
   
   // ไม่ต้องแก้ไขส่วนนี้
-  API_ENDPOINT: function() {
+  get API_ENDPOINT() {
     return this.API_BASE_URL + '/api/memories';
   },
   
@@ -26,6 +26,7 @@ const CONFIG = {
   LOCAL_CACHE_KEY: 'love-memory-cache',
   THEME_STORAGE_KEY: 'love-memory-theme',
   ANNIVERSARY_KEY: 'love-memory-anniversary',
+  AUTH_KEY: 'love-memory-auth',
   
   // UI Settings
   HEART_EMOJIS: ['💗', '💖', '💕', '🩷', '💞', '🌸'],
