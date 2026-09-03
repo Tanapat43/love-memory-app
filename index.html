@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Space Love Story - เรื่องราวความรักในอวกาศลึกลับ" />
   <title>Space Love Story | ความรักของเราในอวกาศ</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=''http://www.w3.org/2000/svg'' viewBox=''0 0 100 100''><text y=''0.9em'' font-size=''90''>🚀</text></svg>" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -17,149 +17,60 @@
   <!-- ===== Hero Section หน้าแรกเต็มจอ ===== -->
   <section class="hero" id="hero">
     <div class="hero-content">
-      <!-- รูปภาพปก -->
-      <div class="hero-image-container">
-        <img src="images/cover_photo.jpg" alt="รูปคู่ของเรา" class="hero-image" onerror="this.parentElement.innerHTML='<div class=\'placeholder-image\'>💕<br>รูปคู่ของเรา</div>'" />
-      </div>
-      
-      <!-- หัวข้อและปุ่ม -->
+      <!-- หัวข้อ -->
       <div class="hero-text">
         <h1 class="hero-title">
           <span class="title-glow">🚀 Space Love Story 💫</span>
         </h1>
         <p class="hero-subtitle">ความรักของเรากว้างใหญ่เท่าจักรวาล...</p>
-        <button class="start-btn" id="startBtn">
-          <span class="btn-text">✨ สตาร์ทการเดินทางอวกาศของเรา</span>
-          <span class="btn-icon">🚀💕🌌</span>
-        </button>
+      </div>
+
+      <!-- ส่วนอัปโหลดรูปภาพ -->
+      <div class="upload-section" id="uploadSection">
+        <div class="upload-container">
+          <label for="photoInput" class="upload-btn" id="uploadBtn">
+            <span class="upload-icon">📸</span>
+            <span class="upload-text">เลือกรูปภาพคู่ของเรา</span>
+            <span class="upload-hint">เลือกได้หลายรูป</span>
+          </label>
+          <input type="file" id="photoInput" accept="image/*" multiple hidden />
+        </div>
+
+        <!-- พื้นที่แสดงตัวอย่างรูปภาพ -->
+        <div class="preview-section" id="previewSection" hidden>
+          <h3 class="preview-title">📷 รูปภาพที่เลือก (<span id="photoCount">0</span> รูป)</h3>
+          <div class="thumbnails-container" id="thumbnailsContainer"></div>
+          
+          <!-- ช่องกรอกจำนวนรูปที่ต้องการโชว์ -->
+          <div class="photo-count-section">
+            <label for="displayCount" class="count-label">จำนวนรูปภาพที่ต้องการโชว์:</label>
+            <input type="number" id="displayCount" class="count-input" min="1" value="5" />
+          </div>
+
+          <!-- ปุ่มสตาร์ท -->
+          <button class="start-btn" id="startBtn">
+            <span class="btn-text">✨ สตาร์ทการเดินทางอวกาศของเรา</span>
+            <span class="btn-icon">🚀💕🌌</span>
+          </button>
+        </div>
       </div>
     </div>
   </section>
+
+  <!-- ===== Spaceship Warp Animation Overlay ===== -->
+  <div class="warp-overlay" id="warpOverlay">
+    <div class="warp-lines"></div>
+    <div class="spaceship">🚀</div>
+    <div class="warp-text">กำลังเปิดวาร์ป...</div>
+  </div>
+
   <!-- ===== Timeline เรื่องราวความรักอวกาศ ===== -->
   <section class="timeline-section" id="timelineSection" hidden>
-    <div class="timeline">
-      
-      <!-- โหนด 1 - ซ้าย -->
-      <div class="timeline-item left" data-aos="fade-right">
-        <div class="timeline-card">
-          <div class="card-image">
-            <img src="images/photo1.jpg" alt="รูปที่ 1" />
-          </div>
-          <div class="card-content">
-            <span class="date">01/01/2024</span>
-            <h3>วันแรกที่เจอกัน</h3>
-          </div>
-        </div>
-        <div class="timeline-connector">
-          <div class="timeline-dot">🌟</div>
-          <div class="timeline-line"></div>
-        </div>
-      </div>
-
-      <!-- โหนด 2 - ขวา -->
-      <div class="timeline-item right" data-aos="fade-left">
-        <div class="timeline-connector">
-          <div class="timeline-dot">💖</div>
-          <div class="timeline-line"></div>
-        </div>
-        <div class="timeline-card">
-          <div class="card-image">
-            <img src="images/photo2.jpg" alt="รูปที่ 2" />
-          </div>
-          <div class="card-content">
-            <span class="date">14/02/2024</span>
-            <h3>วันแห่งความรัก</h3>
-          </div>
-        </div>
-      </div>
-
-      <!-- โหนด 3 - ซ้าย -->
-      <div class="timeline-item left" data-aos="fade-right">
-        <div class="timeline-card">
-          <div class="card-image">
-            <img src="images/photo3.jpg" alt="รูปที่ 3" />
-          </div>
-          <div class="card-content">
-            <span class="date">01/03/2024</span>
-            <h3>ทริปเที่ยวด้วยกัน</h3>
-          </div>
-        </div>
-        <div class="timeline-connector">
-          <div class="timeline-dot">💕</div>
-          <div class="timeline-line"></div>
-        </div>
-      </div>
-
-      <!-- โหนด 4 - ขวา -->
-      <div class="timeline-item right" data-aos="fade-left">
-        <div class="timeline-connector">
-          <div class="timeline-dot">🌸</div>
-          <div class="timeline-line"></div>
-        </div>
-        <div class="timeline-card">
-          <div class="card-image">
-            <img src="images/photo4.jpg" alt="รูปที่ 4" />
-          </div>
-          <div class="card-content">
-            <span class="date">15/04/2024</span>
-            <h3>ช่วงเวลาดีๆ</h3>
-          </div>
-        </div>
-      </div>
-
-      <!-- โหนด 5 - ซ้าย -->
-      <div class="timeline-item left" data-aos="fade-right">
-        <div class="timeline-card">
-          <div class="card-image">
-            <img src="images/photo5.jpg" alt="รูปที่ 5" />
-          </div>
-          <div class="card-content">
-            <span class="date">20/05/2024</span>
-            <h3>วันครบรอบ</h3>
-          </div>
-        </div>
-        <div class="timeline-connector">
-          <div class="timeline-dot">💗</div>
-          <div class="timeline-line"></div>
-        </div>
-      </div>
-
-      <!-- โหนด 6 - ขวา -->
-      <div class="timeline-item right" data-aos="fade-left">
-        <div class="timeline-connector">
-          <div class="timeline-dot">💖</div>
-          <div class="timeline-line"></div>
-        </div>
-        <div class="timeline-card">
-          <div class="card-image">
-            <img src="images/photo6.jpg" alt="รูปที่ 6" />
-          </div>
-          <div class="card-content">
-            <span class="date">01/06/2024</span>
-            <h3>การเดินทาง</h3>
-          </div>
-        </div>
-      </div>
-
-      <!-- โหนด 7 - ซ้าย -->
-      <div class="timeline-item left" data-aos="fade-right">
-        <div class="timeline-card">
-          <div class="card-image">
-            <img src="images/photo7.jpg" alt="รูปที่ 7" />
-          </div>
-          <div class="card-content">
-            <span class="date">01/07/2024</span>
-            <h3>อนาคตที่ดี</h3>
-          </div>
-        </div>
-        <div class="timeline-connector">
-          <div class="timeline-dot">💫</div>
-          <div class="timeline-line"></div>
-        </div>
-      </div>
-
+    <div class="timeline" id="timeline">
+      <!-- Timeline items จะถูกสร้างแบบ dynamic ด้วย JavaScript -->
     </div>
   </section>
+
   <!-- ===== ส่วนล่างสุด: ข้อความสรุป ===== -->
   <section class="finale" id="finale" hidden>
     <div class="finale-card">

@@ -1,24 +1,25 @@
-﻿/*
- * =========================================================
- *  🚀 Space Love Story - Interactive Timeline
- *  เว็บบอกรักแฟนธีมอวกาศ
- * =========================================================
- */
 
 'use strict';
 
-/* ========== ตัวแปรหลัก ========== */
 const startBtn = document.getElementById('startBtn');
 const hero = document.getElementById('hero');
 const timelineSection = document.getElementById('timelineSection');
+const timeline = document.getElementById('timeline');
 const finale = document.getElementById('finale');
 const starsBg = document.getElementById('starsBg');
 const restartBtn = document.getElementById('restartBtn');
+const photoInput = document.getElementById('photoInput');
+const uploadBtn = document.getElementById('uploadBtn');
+const previewSection = document.getElementById('previewSection');
+const thumbnailsContainer = document.getElementById('thumbnailsContainer');
+const photoCount = document.getElementById('photoCount');
+const displayCount = document.getElementById('displayCount');
+const warpOverlay = document.getElementById('warpOverlay');
 
-/* ========== สร้างดาวระยิบระยับพื้นหลัง ========== */
+let selectedPhotos = [];
+
 function createStars() {
   const starCount = 150;
-  
   for (let i = 0; i < starCount; i++) {
     const star = document.createElement('div');
     star.className = 'star';
@@ -26,21 +27,16 @@ function createStars() {
     star.style.top = Math.random() * 100 + '%';
     star.style.animationDelay = Math.random() * 3 + 's';
     star.style.animationDuration = (2 + Math.random() * 3) + 's';
-    
-    // สุ่มขนาดดาว
     const size = Math.random() * 2 + 1;
     star.style.width = size + 'px';
     star.style.height = size + 'px';
-    
     starsBg.appendChild(star);
   }
 }
 
-/* ========== สร้างหัวใจลอยอวกาศ ========== */
 function createFloatingHearts() {
-  const heartEmojis = ['💗', '💖', '💕', '🩷', '💞', '✨', '🌟', '💫', '🦋', '🪐'];
+  const heartEmojis = ['❤️', '💕', '💖', '✨', '🌟', '💫'];
   const heartCount = 15;
-
   for (let i = 0; i < heartCount; i++) {
     const heart = document.createElement('span');
     heart.className = 'floating-heart';
@@ -52,125 +48,149 @@ function createFloatingHearts() {
     starsBg.appendChild(heart);
   }
 }
-/* ========== Smooth Scroll ไปยัง Timeline ========== */
+
+function loadPhotosFromStorage() {
+  try {
+    const stored = localStorage.getItem('spaceLovePhotos');
+    if (stored) {
+      selectedPhotos = JSON.parse(stored);
+      if (selectedPhotos.length > 0) {
+        displayThumbnails();
+        previewSection.hidden = false;
+        photoCount.textContent = selectedPhotos.length;
+      }
+    }
+  } catch (e) {
+    console.log('No stored photos found');
+  }
+}
+
+function savePhotosToStorage() {
+  try {
+    localStorage.setItem('spaceLovePhotos', JSON.stringify(selectedPhotos));
+  } catch (e) {
+    console.error('Storage full');
+  }
+}
+
+function displayThumbnails() {
+  thumbnailsContainer.innerHTML = '';
+  selectedPhotos.forEach((photo, index) => {
+    const img = document.createElement('img');
+    img.src = photo;
+    img.className = 'thumbnail';
+    img.alt = 'Photo ' + (index + 1);
+    thumbnailsContainer.appendChild(img);
+  });
+  photoCount.textContent = selectedPhotos.length;
+}
+
+function handlePhotoSelect(e) {
+  const files = Array.from(e.target.files);
+  if (files.length === 0) return;
+  files.forEach(file => {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        selectedPhotos.push(event.target.result);
+        displayThumbnails();
+        savePhotosToStorage();
+        previewSection.hidden = false;
+        displayCount.max = selectedPhotos.length;
+        displayCount.value = Math.min(selectedPhotos.length, 10);
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+}
+
+function createTimeline() {
+  const count = Math.min(parseInt(displayCount.value) || selectedPhotos.length, selectedPhotos.length);
+  const photosToShow = selectedPhotos.slice(0, count);
+  timeline.innerHTML = '';
+  const dots = ['❤️', '💕', '💖', '✨', '🌟', '💫', '🦋', '🌸', '💝', '🩷'];
+  photosToShow.forEach((photo, index) => {
+    const isLeft = index % 2 === 0;
+    const item = document.createElement('div');
+    item.className = 'timeline-item ' + (isLeft ? 'left' : 'right');
+    const dotIndex = index % dots.length;
+    item.innerHTML = '<div class="timeline-card"><div class="card-image"><img src="' + photo + '" alt="Photo ' + (index + 1) + '" /></div></div><div class="timeline-connector"><div class="timeline-dot">' + dots[dotIndex] + '</div><div class="timeline-line"></div></div>';
+    timeline.appendChild(item);
+  });
+}
+
+function playWarpAnimation() {
+  return new Promise(resolve => {
+    warpOverlay.classList.add('active');
+    setTimeout(() => {
+      warpOverlay.classList.remove('active');
+      resolve();
+    }, 2000);
+  });
+}
+
 function smoothScrollToTimeline() {
-  // แสดง Timeline ก่อน
   timelineSection.hidden = false;
   finale.hidden = false;
-  
-  // ใช้ requestAnimationFrame เพื่อให้ DOM อัปเดตก่อน scroll
   requestAnimationFrame(() => {
-    const targetPosition = timelineSection.offsetTop - 20; // ห่างจากบน 20px
-    
-    // ใช้ custom smooth scroll
+    const targetPosition = timelineSection.offsetTop - 20;
     const startPosition = window.pageYOffset;
     const distance = targetPosition - startPosition;
-    const duration = 1500; // 1.5 วินาที
+    const duration = 1500;
     let startTime = null;
-    
     function animationScroll(currentTime) {
       if (startTime === null) startTime = currentTime;
       const timeElapsed = currentTime - startTime;
       const progress = Math.min(timeElapsed / duration, 1);
-      
-      // ใช้ easing function (easeInOutCubic)
-      const ease = progress < 0.5 
-        ? 4 * progress * progress * progress 
-        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-      
+      const ease = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
       window.scrollTo(0, startPosition + distance * ease);
-      
       if (timeElapsed < duration) {
         requestAnimationFrame(animationScroll);
-      } else {
-        // เมื่อ scroll เสร็จ ให้เริ่มแอนิเมชั่น Timeline Items
-        animateTimelineItems();
       }
     }
-    
     requestAnimationFrame(animationScroll);
   });
 }
 
-/* ========== เริ่มต้นการเดินทางอวกาศ ========== */
-function startStory() {
-  // ซ่อน Hero พร้อมแอนิเมชั่น
-  hero.style.opacity = '0';
-  hero.style.transform = 'translateY(-50px)';
-  hero.style.transition = 'all 0.8s ease-out';
-  
-  setTimeout(() => {
-    hero.classList.add('hidden');
-    // รีเซ็ต style สำหรับกรณี restart
-    hero.style.opacity = '';
-    hero.style.transform = '';
-  }, 800);
-  
-  // Smooth scroll ไป Timeline
-  setTimeout(() => {
-    smoothScrollToTimeline();
-  }, 300);
-}
-/* ========== แอนิเมชั่น Timeline Items ========== */
 function animateTimelineItems() {
   const items = document.querySelectorAll('.timeline-item');
-  
   items.forEach((item, index) => {
     setTimeout(() => {
       item.classList.add('visible');
-    }, index * 300); // แต่ละอันจะแสดงที่ละ 300ms
+    }, index * 300);
   });
 }
 
-/* ========== ตรวจสอบ Scroll เพื่อแสดง Items ========== */
-function setupScrollObserver() {
-  const items = document.querySelectorAll('.timeline-item');
-  
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-      }
-    });
-  }, {
-    threshold: 0.2,
-    rootMargin: '0px 0px -50px 0px'
-  });
-  
-  items.forEach(item => observer.observe(item));
+async function startStory() {
+  if (selectedPhotos.length === 0) {
+    alert('Please select photos first!');
+    return;
+  }
+  createTimeline();
+  await playWarpAnimation();
+  smoothScrollToTimeline();
+  setTimeout(() => {
+    animateTimelineItems();
+  }, 1600);
 }
 
-/* ========== เดินทางกลับไปอีกครั้ง ========== */
 function restartStory() {
-  // ซ่อน Timeline และ Finale
   timelineSection.hidden = true;
   finale.hidden = true;
-  
-  // รีเซ็ต Timeline Items
   document.querySelectorAll('.timeline-item').forEach(item => {
     item.classList.remove('visible');
   });
-  
-  // แสดง Hero อีกครั้ง
-  hero.classList.remove('hidden');
-  
-  // เลื่อนกลับไปบนสุด
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/* ========== Event Listeners ========== */
-if (startBtn) {
-  startBtn.addEventListener('click', startStory);
-}
+if (startBtn) startBtn.addEventListener('click', startStory);
+if (restartBtn) restartBtn.addEventListener('click', restartStory);
+if (uploadBtn) uploadBtn.addEventListener('click', () => photoInput.click());
+if (photoInput) photoInput.addEventListener('change', handlePhotoSelect);
 
-if (restartBtn) {
-  restartBtn.addEventListener('click', restartStory);
-}
-
-/* ========== เริ่มต้น ========== */
 document.addEventListener('DOMContentLoaded', () => {
   createStars();
   createFloatingHearts();
-  setupScrollObserver();
-  console.log('🚀 Space Love Story - พร้อมเดินทางท่องอวกาศแล้ว!');
+  loadPhotosFromStorage();
+  console.log('Space Love Story ready!');
 });
