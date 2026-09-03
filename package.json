@@ -1,0 +1,32 @@
+{
+  "name": "love-memory-app",
+  "version": "4.0.0",
+  "description": "Love Memory App - เว็บเก็บความทรงจำส่วนตัว เชื่อมต่อ MongoDB Atlas ผ่าน Vercel Serverless Functions",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod",
+    "lint": "eslint api/"
+  },
+  "dependencies": {
+    "mongodb": "^6.3.0"
+  },
+  "devDependencies": {
+    "vercel": "^33.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Tanapat43/love-memory-app.git"
+  },
+  "keywords": [
+    "love",
+    "memory",
+    "mongodb",
+    "vercel",
+    "serverless"
+  ],
+  "author": "Tanapat43",
+  "license": "MIT"
+}
