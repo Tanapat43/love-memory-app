@@ -3,149 +3,132 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="referrer" content="no-referrer" />
-  <meta name="robots" content="noindex, nofollow" />
-  <meta name="description" content="เว็บเก็บความทรงจำส่วนตัว — บันทึกทุกอย่างไว้ในเครื่องของคุณเท่านั้น (Privacy-First)" />
-  <title>💕 ความทรงจำของเรา — เก็บทุกช่วงเวลาสุดน่ารัก</title>
+  <meta name="description" content="💕 เว็บบอกรักแฟน - เรื่องราวความรักของเรา" />
+  <title>💕 รักเธอที่สุดเลยนะ</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>💗</text></svg>" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- 🌸 ฉากหลัง: หัวใจลอยขึ้น (สร้างโดย app.js และแอนิเมตด้วย style.css) -->
+  <!-- 🌸 ฉากหลัง: หัวใจลอย -->
   <div class="hearts-bg" id="heartsBg" aria-hidden="true"></div>
 
-  <!-- 🌙 ปุ่มสลับโหมดกลางคืน/กลางวัน -->
-  <button type="button" class="theme-toggle" id="themeToggle" aria-label="สลับไปโหมดกลางคืน" title="สลับธีม">🌙</button>
-
-  <!-- 🔑 หน้าเข้าสู่ระบบ / สมัครสมาชิก (แสดงเมื่อยังไม่ล็อกอิน) -->
-  <div class="auth-view" id="authView">
-    <div class="auth-card">
-      <p class="auth-logo" aria-hidden="true">💕</p>
-      <h1 class="auth-title">ความทรงจำของเรา</h1>
-      <p class="auth-subtitle">ล็อกอินเพื่อเก็บความทรงจำไว้ในคลาวด์ส่วนตัวของคุณ</p>
-
-      <div class="auth-tabs" role="tablist">
-        <button type="button" class="auth-tab active" id="tabLogin">เข้าสู่ระบบ</button>
-        <button type="button" class="auth-tab" id="tabRegister">สมัครสมาชิก</button>
-      </div>
-
-      <form id="authForm" novalidate>
-        <input type="email" id="authEmail" placeholder="📧 อีเมล" autocomplete="email" required />
-        <input type="password" id="authPassword" placeholder="🔑 รหัสผ่าน (อย่างน้อย 6 ตัว)" minlength="6" required />
-        <button type="submit" class="btn-primary" id="authSubmitBtn">💕 เข้าสู่ระบบ</button>
-        <p class="auth-error hidden" id="authError" role="alert"></p>
-      </form>
-
-      <p class="auth-note">🔒 ความทรงจำของคุณจะถูกเก็บในบัญชีส่วนตัวของคุณเอง ไม่มีใครเห็นยกเว้นคุณ</p>
+  <!-- ===== ส่วนบนสุด: ปุ่มสตาร์ท ===== -->
+  <section class="hero" id="hero">
+    <div class="hero-content">
+      <h1 class="hero-title">💕 ความรักของเรา 💕</h1>
+      <p class="hero-subtitle">เรื่องราวที่อยากบอกรักเธอ...</p>
+      <button class="start-btn" id="startBtn">
+        <span class="btn-text">💖 สตาร์ทความรักของเรา</span>
+        <span class="btn-hearts">💗✨🌸</span>
+      </button>
     </div>
-  </div>
+  </section>
 
-  <!-- 🚪 ปุ่มออกจากระบบ (มุมซ้ายบน แสดงเมื่อล็อกอินอยู่) -->
-  <button type="button" class="logout-btn hidden" id="logoutBtn" aria-label="ออกจากระบบ" title="ออกจากระบบ">🚪 <span id="userEmail">ออกจากระบบ</span></button>
-
-  <!-- ===== ส่วนหัว ===== -->
-  <header class="header">
-    <h1 class="title">💕 ความทรงจำของเรา 💕</h1>
-    <p class="subtitle">เก็บทุกช่วงเวลาสุดน่ารักไว้ในที่ส่วนตัวของคุณเอง</p>
-
-    <!-- ⏳ นับจำนวนวันที่คบกัน -->
-    <section class="days-counter" aria-label="นับจำนวนวันที่คบกัน">
-      <div class="days-card">
-        <p class="days-emoji" aria-hidden="true">💕</p>
-        <p class="days-text" id="daysText">ตั้งวันแรกที่เริ่มคบกันด้านล่าง
-แล้วเดี๋ยวเราช่วยนับวันให้นะ 💕</p>
-        <div class="days-controls">
-          <input type="date" id="anniversaryInput" class="days-input" aria-label="วันแรกที่เริ่มคบกัน" />
-          <button type="button" id="clearAnniversary" class="btn-clear-days" hidden>ล้าง</button>
+  <!-- ===== Timeline เรื่องราวความรัก ===== -->
+  <section class="timeline-section" id="timelineSection" hidden>
+    <div class="timeline">
+      
+      <!-- โหนด 1 -->
+      <div class="timeline-item" data-aos="fade-up">
+        <div class="timeline-dot">💗</div>
+        <div class="timeline-line"></div>
+        <div class="timeline-card">
+          <span class="timeline-icon">🌟</span>
+          <h3>วันแรกที่เจอเธอ</h3>
+          <p>วันนั้นเป็นวันที่โลกหยุดหมุน... เพราะเธอเดินเข้ามาในชีวิต ทุกอย่างเปลี่ยนไป ทุกอย่างสวยงามขึ้นมาทันที 💕</p>
         </div>
       </div>
-    </section>
 
-    <p class="privacy-badge">🔒 ความทรงจำของคุณเก็บในบัญชีส่วนตัวของคุณเอง — ไม่มีใครเห็นยกเว้นคุณ</p>
-  </header>
-
-  <main class="container">
-    <!-- ===== ฟอร์มอัปโหลดรูป + บันทึกข้อความ ===== -->
-    <section class="upload-card" aria-labelledby="uploadTitle">
-      <h2 id="uploadTitle">📸 เพิ่มความทรงจำใหม่</h2>
-
-      <form id="memoryForm" novalidate>
-        <label class="drop-zone" id="dropZone" for="photoInput">
-          <input type="file" id="photoInput" accept="image/*" hidden />
-          <span class="drop-zone-icon" id="dropIcon">🖼️</span>
-          <span class="drop-zone-text" id="dropText">แตะเพื่อเลือกรูปภาพ</span>
-          <span class="drop-zone-hint" id="dropHint">หรือลากรูปมาวางที่นี่ (JPG, PNG, GIF, WEBP)</span>
-        </label>
-
-        <div class="preview-wrap hidden" id="previewWrap">
-          <div class="preview-box">
-            <img id="previewImg" alt="ตัวอย่างรูปภาพที่เลือก" />
-          </div>
-          <button type="button" class="btn-remove-preview" id="removePreview">✕ เอารูปนี้ออก</button>
+      <!-- โหนด 2 -->
+      <div class="timeline-item" data-aos="fade-up">
+        <div class="timeline-dot">💖</div>
+        <div class="timeline-line"></div>
+        <div class="timeline-card">
+          <span class="timeline-icon">😊</span>
+          <h3>รอยยิ้มของเธอ</h3>
+          <p>รอยยิ้มของเธอทำให้ฉันลืมความเหนื่อยล้า ทุกครั้งที่นึกถึงใบหน้าเธอ หัวใจฉันเต้นแรงขึ้นเสมอ... ขอบคุณที่มีรอยยิ้มแบบนั้นให้ฉันเห็น 🥰</p>
         </div>
-
-        <label class="field-label" for="memoryText">
-          ✍️ บันทึกข้อความความทรงจำ <small>(ใส่หรือไม่ใส่ก็ได้นะ)</small>
-        </label>
-        <textarea id="memoryText" rows="3" maxlength="500"
-          placeholder="เล่าเรื่องน่ารักๆ ของวันนี้... เช่น วันนี้เราไปกินไอศกรีมด้วยกัน 🍦"></textarea>
-
-        <button type="submit" class="btn-primary" id="saveBtn">💖 บันทึกความทรงจำ</button>
-      </form>
-    </section>
-
-    <!-- ===== สำรอง / กู้คืนข้อมูล ===== -->
-    <section class="backup-card" aria-labelledby="backupTitle">
-      <h2 id="backupTitle">🧰 สำรองข้อมูลของเรา</h2>
-      <p class="backup-desc">ดาวน์โหลดความทรงจำทั้งหมด (รูป + ข้อความ) เป็นไฟล์ JSON เก็บไว้เอง หรือนำกลับมาใช้เมื่อเปลี่ยนเครื่อง/มือถือ — ไฟล์อยู่กับคุณเท่านั้น 🔒</p>
-      <div class="backup-actions">
-        <button type="button" id="exportBtn" class="btn-soft">📥 Export เป็นไฟล์ JSON</button>
-        <label class="btn-soft" for="importInput">📤 Import จากไฟล์ JSON</label>
-        <input type="file" id="importInput" accept="application/json,.json" hidden />
       </div>
-    </section>
 
-    <!-- ===== แกลเลอรีแบบไทม์ไลน์ (การ์ดโพลารอยด์สลับซ้าย-ขวา) ===== -->
-    <section class="gallery-section" aria-labelledby="galleryTitle">
-      <h2 id="galleryTitle">🌟 ความทรงจำของเรา <span class="count-pill" id="memoryCount"></span></h2>
-
-      <ol class="timeline" id="gallery"></ol>
-
-      <div class="empty-state" id="emptyState">
-        <span class="empty-icon">🌷</span>
-        <p>ยังไม่มีความทรงจำเลยน้า<br />เริ่มเก็บช่วงเวลาแรกของเรากันเถอะ!</p>
+      <!-- โหนด 3 -->
+      <div class="timeline-item" data-aos="fade-up">
+        <div class="timeline-dot">💕</div>
+        <div class="timeline-line"></div>
+        <div class="timeline-card">
+          <span class="timeline-icon">🤗</span>
+          <h3>การอยู่เคียงข้าง</h3>
+          <p>ไม่ว่าวันไหนที่เธออยู่ข้างๆ ทุกอย่างก็สมบูรณ์แบบ ไม่ต้องการอะไรมาก แค่อยู่กับเธอก็คือความสุขที่สุดแล้ว 💝</p>
+        </div>
       </div>
-    </section>
-  </main>
+
+      <!-- โหนด 4 -->
+      <div class="timeline-item" data-aos="fade-up">
+        <div class="timeline-dot">🌸</div>
+        <div class="timeline-line"></div>
+        <div class="timeline-card">
+          <span class="timeline-icon">✨</span>
+          <h3>ความสำคัญของเธอ</h3>
+          <p>เธอคือคนที่ทำให้ฉันอยากเป็นคนดีขึ้น อยากทำทุกอย่างให้เธอมีความสุข เธอคือแรงบันดาลใจที่ยิ่งใหญ่ที่สุดในชีวิต 🌷</p>
+        </div>
+      </div>
+
+      <!-- โหนด 5 -->
+      <div class="timeline-item" data-aos="fade-up">
+        <div class="timeline-dot">💗</div>
+        <div class="timeline-line"></div>
+        <div class="timeline-card">
+          <span class="timeline-icon">🌈</span>
+          <h3>ทุกวันกับเธอ</h3>
+          <p>ทุกวันที่ได้ตื่นมาแล้วรู้ว่าเธออยู่ในชีวิต นั่นคือพรของฉัน ไม่มีอะไรแลกได้กับความรู้สึกนี้เลย 🌈</p>
+        </div>
+      </div>
+
+      <!-- โหนด 6 -->
+      <div class="timeline-item" data-aos="fade-up">
+        <div class="timeline-dot">💖</div>
+        <div class="timeline-line"></div>
+        <div class="timeline-card">
+          <span class="timeline-icon">🦋</span>
+          <h3>คำขอบคุณ</h3>
+          <p>ขอบคุณที่เธอเลือกเชื่อใจฉัน ขอบคุณที่เธออยู่ตรงนี้ ขอบคุณทุกๆ วันที่เธอให้ฉันได้รักเธอ 🦋</p>
+        </div>
+      </div>
+
+      <!-- โหนด 7 -->
+      <div class="timeline-item" data-aos="fade-up">
+        <div class="timeline-dot">💕</div>
+        <div class="timeline-line"></div>
+        <div class="timeline-card">
+          <span class="timeline-icon">💝</span>
+          <h3>สัญญากับเธอ</h3>
+          <p>ฉันสัญญาว่าจะดูแลเธอ รักเธอ และเป็นที่พักพิงให้เธอเสมอ ไม่ว่าจะเกิดอะไรขึ้น ฉันจะอยู่ตรงนี้เคียงข้างเธอ 💝</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===== ส่วนล่างสุด: ข้อความสรุป ===== -->
+  <section class="finale" id="finale" hidden>
+    <div class="finale-card">
+      <div class="finale-hearts">💗💕💖💕💗</div>
+      <h2 class="finale-title">รักเธอที่สุดเลยนะ</h2>
+      <p class="finale-text">
+        ขอบคุณที่เธอมีอยู่ในชีวิต...<br>
+        ทุกวันคือวันที่ดีเพราะเธอ<br>
+        รักเธอมากๆ เลยนะ 💕
+      </p>
+      <div class="finale-hearts">💗💕💖💕💗</div>
+      <button class="restart-btn" id="restartBtn">🔄 กลับไปดูอีกครั้ง</button>
+    </div>
+  </section>
 
   <!-- ===== ส่วนท้าย ===== -->
   <footer class="footer">
-    <p>🔒 ความทรงจำเก็บในคลาวด์ MongoDB Atlas — เข้าถึงได้จากทุกที่ผ่าน Vercel API</p>
-    <p id="storageInfo">💾 เชื่อมต่อกับฐานข้อมูลคลาวด์...</p>
-    <p class="version-tag">v4.0.0 (API Mode)</p>
+    <p>💕 ทำด้วยความรักเพื่อคนที่รักที่สุด 💕</p>
   </footer>
 
-  <!-- ===== ป็อปอัปยืนยันการลบ ===== -->
-  <div class="modal-overlay hidden" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
-    <div class="modal">
-      <h3 id="deleteModalTitle">ลบความทรงจำนี้?</h3>
-      <p>รูปภาพและข้อความจะถูกลบถาวร และกู้คืนกลับมาไม่ได้นะ 🥺</p>
-      <div class="modal-actions">
-        <button type="button" class="btn-ghost" id="cancelDelete">ยกเลิก</button>
-        <button type="button" class="btn-danger" id="confirmDelete">ลบเลย</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== ข้อความแจ้งเตือน ===== -->
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-  <noscript>
-    <p style="text-align:center">กรุณาเปิดใช้งาน JavaScript เพื่อบันทึกความทรงจำไว้ในเครื่องของคุณ</p>
-  </noscript>
-
-  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
