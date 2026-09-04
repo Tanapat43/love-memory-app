@@ -3,10 +3,10 @@
    ---------------------------------------------------------
    สารบัญ
    1. Elements & State
-   2. Background Effects (ดาว / หัวใจลอย)
+   2. Background Effects (ดาว / ฝุ่นดาวโทนอุ่น)
    3. Photo Handling (อัปโหลด / จัดเก็บ / ตัวอย่าง)
    4. Timeline — Polaroid Photos (สร้าง + reveal ทีละรูป)
-   5. Black Hole Warp Transition
+   5. Rocket Warp Transition
    6. Auto Smooth Scroll
    7. Flow Control (เริ่มการเดินทาง)
    8. Event Listeners
@@ -31,6 +31,7 @@ const photoCount = document.getElementById('photoCount');
 const displayCount = document.getElementById('displayCount');
 const warpOverlay = document.getElementById('warpOverlay');
 const warpFlash = document.getElementById('warpFlash');
+const warpPhotos = document.getElementById('warpPhotos');
 
 let selectedPhotos = [];
 
@@ -39,36 +40,41 @@ let selectedPhotos = [];
    2. Background Effects
    ========================================= */
 
-// สร้างดาวระยิบระยับบนพื้นหลัง
-function createStars() {
-  const starCount = 150;
-  for (let i = 0; i < starCount; i++) {
+// สร้างดาวระยิบระยับ (ใช้ทำพื้นหลังหน้าเว็บ และฉากหลังของ overlay วาร์ป)
+function createStars(container = starsBg, count = 150) {
+  for (let i = 0; i < count; i++) {
     const star = document.createElement('div');
     star.className = 'star';
     star.style.left = Math.random() * 100 + '%';
     star.style.top = Math.random() * 100 + '%';
-    star.style.animationDelay = Math.random() * 3 + 's';
-    star.style.animationDuration = 2 + Math.random() * 3 + 's';
+    star.style.animationDelay = Math.random() * 4 + 's';
+    star.style.animationDuration = 3 + Math.random() * 3 + 's';
     const size = Math.random() * 2 + 1;
     star.style.width = size + 'px';
     star.style.height = size + 'px';
-    starsBg.appendChild(star);
+    container.appendChild(star);
   }
 }
 
-// สร้างหัวใจ/ดาวลอยขึ้นจากล่างจอ
-function createFloatingHearts() {
-  const heartEmojis = ['❤️', '💕', '💖', '✨', '🌟', '💫'];
-  const heartCount = 15;
-  for (let i = 0; i < heartCount; i++) {
-    const heart = document.createElement('span');
-    heart.className = 'floating-heart';
-    heart.textContent = heartEmojis[Math.floor(Math.random() * heartEmojis.length)];
-    heart.style.left = Math.random() * 100 + '%';
-    heart.style.animationDelay = Math.random() * 20 + 's';
-    heart.style.animationDuration = 15 + Math.random() * 15 + 's';
-    heart.style.fontSize = 1 + Math.random() * 2 + 'rem';
-    starsBg.appendChild(heart);
+// สร้างฝุ่นดาวเรืองแสงโทนอุ่น (Ambient Soft Lighting)
+function createStardust() {
+  const dustColors = ['255, 210, 138', '255, 236, 200', '188, 220, 255'];
+  const dustCount = 26;
+  for (let i = 0; i < dustCount; i++) {
+    const dust = document.createElement('div');
+    dust.className = 'stardust';
+    const size = 2 + Math.random() * 3;
+    const color = dustColors[Math.floor(Math.random() * dustColors.length)];
+    dust.style.width = size + 'px';
+    dust.style.height = size + 'px';
+    dust.style.left = Math.random() * 100 + '%';
+    dust.style.top = Math.random() * 100 + '%';
+    dust.style.background = 'rgb(' + color + ')';
+    dust.style.setProperty('--glow', 'rgba(' + color + ', 0.5)');
+    dust.style.opacity = (0.25 + Math.random() * 0.3).toFixed(2);
+    dust.style.animationDelay = Math.random() * 10 + 's';
+    dust.style.animationDuration = 26 + Math.random() * 24 + 's';
+    starsBg.appendChild(dust);
   }
 }
 
@@ -144,14 +150,14 @@ function handlePhotoSelect(e) {
 // คำโปรยสั้นๆ ใต้รูปโพลารอยด์ (วนซ้ำตามจำนวนรูป)
 const POLAROID_CAPTIONS = [
   '⭐ ความทรงจำของเรา',
-  '💕 อยู่ด้วยกันทุกวัน',
+  '🌙 อยู่ด้วยกันทุกวัน',
   '🌌 รักกว้างเท่าจักรวาล',
   '✨ โมเมนต์ที่ดีที่สุด',
-  '💖 เธอคือที่สุด',
+  '🪐 เธอคือที่สุด',
   '🚀 เดินทางไปด้วยกัน',
   '💫 ดาวดวงของฉัน',
-  '🌸 วันที่แสนวิเศษ',
-  '🩷 หัวใจของเรา',
+  '☄️ วันที่แสนวิเศษ',
+  '🛸 ผจญภัยด้วยกัน',
   '🔭 ก้าวต่อไปด้วยกัน',
 ];
 
@@ -159,7 +165,7 @@ const POLAROID_CAPTIONS = [
 function createTimeline() {
   const count = Math.min(parseInt(displayCount.value, 10) || selectedPhotos.length, selectedPhotos.length);
   const photosToShow = selectedPhotos.slice(0, count);
-  const dots = ['❤️', '💕', '💖', '✨', '🌟', '💫', '🦋', '🌸', '💝', '🩷'];
+  const dots = ['⭐', '🌟', '✨', '💫', '🚀', '🛸', '🌙', '☄️', '🪐', '🔭'];
 
   timeline.innerHTML = '';
 
@@ -215,28 +221,62 @@ function setupTimelineReveal() {
 }
 
 /* =========================================
-   5. Black Hole Warp Transition
+   5. Rocket Warp Transition
    ========================================= */
-const WARP_SPIRAL_MS = 2400; // เวลาที่จรวดหมุนเกลียวถูกดูดเข้าหลุมดำ
-const WARP_FLASH_MS = 850;   // ความยาวของแสงวาร์ปวาบ
+const WARP = {
+  FLY_IN: 900,           // เฟส 1: จรวดพุ่งเข้ามาจากขอบขวา
+  PHOTO_START: 1400,     // รูปแรกพุ่งออกจากจรวด (หลังเริ่มบินวน 0.5 วินาที)
+  PHOTO_INTERVAL: 420,   // ระยะห่างของรูปแต่ละรูปที่พุ่งออกมา
+  PHOTO_POP: 550,        // ความยาวแอนิเมชัน pop ของรูป 1 รูป
+  HOLD: 650,             // พักหลังรูปสุดท้ายก่อนแสงวาร์ป
+  FLASH: 850,            // ความยาวแสงวาร์ปวาบ
+  RESOLVE_AT_FLASH: 380, // จุดที่แสงสว่างสุด -> เปลี่ยนหน้า
+};
+const MAX_WARP_PHOTOS = 7; // จำนวนรูปสูงสุดที่โชว์เป็นวงรอบจรวด
 
-// เล่นแอนิเมชัน: จรวดหมุนเกลียวเข้าหลุมดำ -> แสงวาร์ปวาบ -> เปลี่ยนหน้าจอ
+// สร้างรูปโพลารอยด์จิ๋ว (ใช้รูปจริงของผู้ใช้) เรียงเป็นวงรอบจุดที่จรวดบินวน
+function buildWarpPhotos() {
+  warpPhotos.innerHTML = '';
+  const shown = Math.min(selectedPhotos.length, MAX_WARP_PHOTOS);
+
+  for (let i = 0; i < shown; i++) {
+    const angle = ((-90 + (360 / shown) * i) * Math.PI) / 180;
+    const radius = 148 + (i % 3) * 22;
+    const photo = document.createElement('div');
+    photo.className = 'warp-photo';
+    photo.style.setProperty('--tx', Math.round(Math.cos(angle) * radius) + 'px');
+    photo.style.setProperty('--ty', Math.round(Math.sin(angle) * radius) + 'px');
+    photo.style.setProperty('--tilt', (Math.random() * 14 - 7).toFixed(2) + 'deg');
+    photo.style.setProperty('--delay', WARP.PHOTO_START + i * WARP.PHOTO_INTERVAL + 'ms');
+    photo.innerHTML = `<img src="${selectedPhotos[i]}" alt="" />`;
+    warpPhotos.appendChild(photo);
+  }
+
+  return shown;
+}
+
+// เล่นแอนิเมชัน: จรวดพุ่งเข้าจากขอบขวา -> บินวนเป็นเกลียวกลางจอ
+// พร้อมรูปโพลารอยด์พุ่งออกมาทีละรูป -> แสงวาร์ปวาบ -> เปลี่ยนหน้าจอ
 function playWarpAnimation() {
   return new Promise((resolve) => {
-    // เปิด Overlay และเริ่มแอนิเมชันจรวดหมุนเกลียว (CSS ผูกกับคลาส .play)
+    const shown = buildWarpPhotos();
+    const lastPhotoMs = WARP.PHOTO_START + (shown - 1) * WARP.PHOTO_INTERVAL + WARP.PHOTO_POP;
+    const flashAt = lastPhotoMs + WARP.HOLD;
+
+    // เปิด Overlay และเริ่มลำดับแอนิเมชัน (CSS ผูกกับคลาส .play)
     warpOverlay.classList.add('active', 'play');
 
-    // จรวดถึงจุดศูนย์กลางหลุมดำ -> เปิดแสงวาร์ปวาบ
-    setTimeout(() => warpFlash.classList.add('flash'), WARP_SPIRAL_MS);
+    // รูปพุ่งครบทุกรูป + พักเล็กน้อย -> แสงวาร์ปวาบ
+    setTimeout(() => warpFlash.classList.add('flash'), flashAt);
 
     // เปลี่ยนหน้าจอช่วงที่แสงสว่างที่สุด เพื่อให้ต่อเนื่องเป็นธรรมชาติ
-    setTimeout(resolve, WARP_SPIRAL_MS + 380);
+    setTimeout(resolve, flashAt + WARP.RESOLVE_AT_FLASH);
 
     // ล้าง Overlay และคลาสแอนิเมชันหลังแสงจางหมด
     setTimeout(() => {
       warpOverlay.classList.remove('active', 'play');
       warpFlash.classList.remove('flash');
-    }, WARP_SPIRAL_MS + WARP_FLASH_MS);
+    }, flashAt + WARP.FLASH);
   });
 }
 
@@ -327,7 +367,7 @@ function pauseAutoScroll() {
    7. Flow Control
    ========================================= */
 
-// คลิกปุ่มสตาร์ท: สร้าง Timeline -> หลุมดำ+วาร์ป -> สลับ Landing Page เป็น Timeline -> Auto-Scroll โชว์รูปทีละใบ
+// คลิกปุ่มสตาร์ท: ซ่อนหน้าแรก -> แอนิเมชันจรวดวาร์ป+รูปพุ่งออก -> แสดง Timeline -> Auto-Scroll โชว์รูปทีละใบ
 async function startStory() {
   if (selectedPhotos.length === 0) {
     alert('Please select photos first!');
@@ -335,6 +375,7 @@ async function startStory() {
   }
 
   stopAutoScroll();
+  hero.hidden = true; // ซ่อนหน้าแรกทันทีที่กดสตาร์ท
   createTimeline();
   await playWarpAnimation();
   switchToTimeline();
@@ -370,7 +411,8 @@ if (photoInput) photoInput.addEventListener('change', handlePhotoSelect);
 
 document.addEventListener('DOMContentLoaded', () => {
   createStars();
-  createFloatingHearts();
+  createStardust();
+  createStars(warpOverlay, 90); // ดาวฉากหลังบน overlay วาร์ป
   loadPhotosFromStorage();
   console.log('Space Love Story ready!');
 });

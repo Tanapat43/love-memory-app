@@ -30,17 +30,16 @@
 }
 
 :root {
-  --space-dark: #0a0a1a;
-  --space-purple: #1a1a3e;
-  --space-blue: #16213e;
-  --nebula-pink: #e94560;
-  --nebula-purple: #9d4edd;
-  --star-white: #ffffff;
-  --glow-cyan: #00d4ff;
-  --glow-pink: #ff6b9d;
-  --text-light: #e0e0e0;
-  --text-dim: #a0a0b0;
-  --spiral-radius: 240px; /* รัศมีเริ่มต้นของจรวดก่อนถูกดูดเข้าหลุมดำ */
+  /* โทนน้ำเงิน-ดำ สบายตา + แสงอุ่น */
+  --space-dark: #04070f;
+  --navy-1: #081226;
+  --navy-2: #0d1d3d;
+  --navy-3: #16305e;
+  --star-white: #fdf8ec;
+  --accent-blue: #6db9ff;
+  --accent-gold: #ffd28a;
+  --text-light: #dfe8f7;
+  --text-dim: #8b9cb9;
 }
 
 html {
@@ -76,12 +75,13 @@ body {
   height: 2px;
   background: var(--star-white);
   border-radius: 50%;
-  animation: twinkle 3s ease-in-out infinite;
+  box-shadow: 0 0 4px 1px rgba(253, 248, 236, 0.35);
+  animation: twinkle 4.5s ease-in-out infinite;
 }
 
 @keyframes twinkle {
-  0%, 100% { opacity: 0.3; transform: scale(1); }
-  50%      { opacity: 1; transform: scale(1.5); }
+  0%, 100% { opacity: 0.25; transform: scale(1); }
+  50%      { opacity: 0.8; transform: scale(1.3); }
 }
 
 .nebula {
@@ -91,24 +91,23 @@ body {
   width: 100%;
   height: 100%;
   background:
-    radial-gradient(ellipse at 20% 30%, rgba(157, 78, 221, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 70%, rgba(233, 69, 96, 0.1) 0%, transparent 50%);
+    radial-gradient(ellipse at 22% 28%, rgba(255, 205, 138, 0.07) 0%, transparent 52%),
+    radial-gradient(ellipse at 78% 72%, rgba(109, 185, 255, 0.06) 0%, transparent 52%);
   pointer-events: none;
   z-index: 0;
 }
 
-.floating-heart {
+/* ฝุ่นดาวเรืองแสงโทนอุ่น ลอยช้าๆ เบาๆ (สี/ตำแหน่งสุ่มจาก JS) */
+.stardust {
   position: absolute;
-  font-size: 1.5rem;
-  opacity: 0.6;
-  animation: floatUp 20s linear infinite;
+  border-radius: 50%;
+  box-shadow: 0 0 9px 2px var(--glow, rgba(255, 210, 138, 0.45));
+  animation: stardustDrift 30s ease-in-out infinite alternate;
 }
 
-@keyframes floatUp {
-  0%   { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-  10%  { opacity: 0.6; }
-  90%  { opacity: 0.6; }
-  100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+@keyframes stardustDrift {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(16px, -24px) scale(1.3); }
 }
 
 /* -------------------------------------------
@@ -142,16 +141,16 @@ body {
 }
 
 .title-glow {
-  background: linear-gradient(135deg, var(--glow-cyan), var(--glow-pink), var(--nebula-purple));
+  background: linear-gradient(135deg, var(--accent-blue), #b8e0ff 45%, var(--accent-gold));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: glow 2s ease-in-out infinite alternate;
+  animation: glow 2.4s ease-in-out infinite alternate;
 }
 
 @keyframes glow {
-  from { filter: drop-shadow(0 0 10px var(--glow-cyan)); }
-  to   { filter: drop-shadow(0 0 20px var(--glow-pink)); }
+  from { filter: drop-shadow(0 0 8px rgba(109, 185, 255, 0.45)); }
+  to   { filter: drop-shadow(0 0 14px rgba(255, 210, 138, 0.45)); }
 }
 
 @keyframes fadeInUp {
@@ -177,18 +176,18 @@ body {
   align-items: center;
   gap: 0.5rem;
   padding: 2rem;
-  background: linear-gradient(135deg, rgba(157, 78, 221, 0.2) 0%, rgba(233, 69, 96, 0.2) 100%);
-  border: 2px dashed var(--nebula-purple);
+  background: linear-gradient(135deg, rgba(22, 48, 94, 0.5) 0%, rgba(13, 29, 61, 0.5) 100%);
+  border: 2px dashed var(--navy-3);
   border-radius: 20px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .upload-btn:hover {
-  background: linear-gradient(135deg, rgba(157, 78, 221, 0.3) 0%, rgba(233, 69, 96, 0.3) 100%);
-  border-color: var(--nebula-pink);
+  background: linear-gradient(135deg, rgba(22, 48, 94, 0.7) 0%, rgba(13, 29, 61, 0.7) 100%);
+  border-color: var(--accent-blue);
   transform: scale(1.02);
-  box-shadow: 0 0 30px rgba(157, 78, 221, 0.4);
+  box-shadow: 0 0 26px rgba(109, 185, 255, 0.25);
 }
 
 .upload-icon { font-size: 3rem; }
@@ -209,7 +208,7 @@ body {
 }
 
 .preview-title {
-  color: var(--glow-cyan);
+  color: var(--accent-blue);
   font-size: 1.1rem;
   margin-bottom: 1rem;
 }
@@ -232,14 +231,14 @@ body {
   height: 80px;
   object-fit: cover;
   border-radius: 10px;
-  border: 2px solid var(--nebula-purple);
+  border: 2px solid var(--navy-3);
   transition: all 0.3s ease;
 }
 
 .thumbnail:hover {
   transform: scale(1.1);
-  border-color: var(--nebula-pink);
-  box-shadow: 0 0 15px rgba(233, 69, 96, 0.5);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 14px rgba(109, 185, 255, 0.35);
 }
 
 .photo-count-section {
@@ -261,8 +260,8 @@ body {
   padding: 0.5rem;
   font-size: 1rem;
   text-align: center;
-  background: rgba(26, 26, 62, 0.8);
-  border: 2px solid var(--nebula-purple);
+  background: rgba(8, 18, 38, 0.8);
+  border: 2px solid var(--navy-3);
   border-radius: 10px;
   color: var(--star-white);
   transition: all 0.3s ease;
@@ -270,8 +269,8 @@ body {
 
 .count-input:focus {
   outline: none;
-  border-color: var(--nebula-pink);
-  box-shadow: 0 0 15px rgba(233, 69, 96, 0.4);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 14px rgba(109, 185, 255, 0.3);
 }
 
 .start-btn {
@@ -284,17 +283,17 @@ body {
   font-size: clamp(1rem, 4vw, 1.2rem);
   font-family: inherit;
   color: var(--star-white);
-  background: linear-gradient(135deg, var(--nebula-purple) 0%, var(--nebula-pink) 100%);
+  background: linear-gradient(135deg, var(--navy-3) 0%, #1d4f8f 100%);
   border: none;
   border-radius: 50px;
   cursor: pointer;
-  box-shadow: 0 0 30px rgba(157, 78, 221, 0.5);
+  box-shadow: 0 0 26px rgba(109, 185, 255, 0.3);
   transition: all 0.3s ease;
 }
 
 .start-btn:hover {
   transform: translateY(-3px) scale(1.05);
-  box-shadow: 0 0 50px rgba(233, 69, 96, 0.6);
+  box-shadow: 0 0 40px rgba(109, 185, 255, 0.45);
 }
 
 .start-btn:active {
@@ -306,20 +305,17 @@ body {
 }
 
 /* -------------------------------------------
-   5. Black Hole Warp Transition
+   5. Rocket Warp Transition
    ------------------------------------------- */
 
-/* Overlay หลุมดำเต็มจอ */
+/* Overlay เต็มจอสำหรับแอนิเมชันเปิดวาร์ป (มีดาวที่ JS เติมให้เป็นฉากหลัง) */
 .warp-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(circle at center, #05050f 0%, #0a0a1a 60%, #14082a 100%);
+  background: radial-gradient(circle at center, #071021 0%, #04070f 62%, #0a1730 100%);
   z-index: 1000;
   overflow: hidden;
   opacity: 0;
@@ -332,103 +328,135 @@ body {
   pointer-events: all;
 }
 
-/* แกนกลางหลุมดำ: ดำสนิท + ขอบเรืองแสงเต้นเป็นจังหวะ */
-.black-hole {
+/* ดาวบน overlay อยู่ใต้ตัวจรวดและรูปภาพ */
+.warp-overlay .star {
+  z-index: 0;
+}
+
+/* --- เฟส 1: จรวดพุ่งเข้ามาจากขอบขวาของจอ --- */
+.warp-rocket-fly {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 190px;
-  height: 190px;
-  transform: translate(-50%, -50%);
+  z-index: 3;
+  font-size: 4.5rem;
+  line-height: 1;
+  opacity: 0;
+  transform: translate(58vw, -50%) rotate(225deg);
+  filter: drop-shadow(0 0 16px rgba(140, 205, 255, 0.75));
 }
 
-.black-hole-core {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle, #000 0 55%, #150a2e 68%, transparent 74%);
-  box-shadow:
-    0 0 35px 6px rgba(157, 78, 221, 0.55),
-    0 0 90px 28px rgba(233, 69, 96, 0.22);
-  animation: blackHolePulse 2.4s ease-in-out infinite;
+.warp-overlay.play .warp-rocket-fly {
+  animation: rocketFlyIn 0.9s cubic-bezier(0.2, 0.75, 0.3, 1) forwards;
 }
 
-@keyframes blackHolePulse {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.05); }
+@keyframes rocketFlyIn {
+  0%   { transform: translate(58vw, -50%) rotate(225deg); opacity: 0; }
+  12%  { opacity: 1; }
+  80%  { transform: translate(118px, -50%) rotate(300deg); opacity: 1; }
+  100% { transform: translate(150px, -50%) rotate(315deg); opacity: 0; }
 }
 
-/* วงแหวนฝุ่นร้อบหมุนรอบหลุมดำ */
-.black-hole-accretion {
-  position: absolute;
-  inset: -34px;
-  border-radius: 50%;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0%,
-    rgba(0, 212, 255, 0.9) 10%,
-    transparent 22%,
-    transparent 48%,
-    rgba(233, 69, 96, 0.9) 58%,
-    transparent 70%
-  );
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 5px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 5px));
-  filter: drop-shadow(0 0 6px rgba(0, 212, 255, 0.7));
-  animation: accretionSpin 1.3s linear infinite;
-}
-
-@keyframes accretionSpin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
-/* จรวด: ชั้นนอกหมุนรอบหลุมดำ (orbit) */
+/* --- เฟส 2: จรวดบินวนเป็นเกลียว/วงกลมกลางจอ (หมุนวนต่อเนื่อง) --- */
 .warp-rocket-orbit {
   position: absolute;
   top: 50%;
   left: 50%;
+  z-index: 3;
   width: 0;
   height: 0;
+  opacity: 0;
 }
 
 .warp-overlay.play .warp-rocket-orbit {
-  animation: orbitSpin 2.4s cubic-bezier(0.55, 0, 0.85, 0.45) forwards;
+  animation:
+    rocketOrbitSpin 3.2s linear 0.9s infinite,
+    rocketFadeIn 0.2s ease-out 0.82s forwards;
 }
 
-@keyframes orbitSpin {
+@keyframes rocketOrbitSpin {
   from { transform: rotate(0deg); }
-  to   { transform: rotate(900deg); }
+  to   { transform: rotate(-720deg); }
 }
 
-/* จรวด: ชั้นในหดรัศมี + ย่อขนาดเด็กลง เหมือนโดนแรงดึงดูดดูดเข้ากลาง */
+@keyframes rocketFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* จรวดตัวจริงบนวงโคจร (หัวจรวดหันตามแนวการบิน) */
 .warp-rocket {
   position: absolute;
   left: 0;
   top: 0;
-  font-size: 4rem;
+  font-size: 4.5rem;
   line-height: 1;
-  filter: drop-shadow(0 0 12px rgba(0, 212, 255, 0.8));
+  transform: translate(150px, -50%) rotate(-45deg);
+  filter: drop-shadow(0 0 16px rgba(140, 205, 255, 0.75));
 }
 
+/* รัศมีบินวนค่อยๆ หดเข้าใน = เกลียววนเข้าหาจุดกึ่งกลาง */
 .warp-overlay.play .warp-rocket {
-  animation: spiralIn 2.4s cubic-bezier(0.55, 0, 0.85, 0.45) forwards;
+  animation: rocketSpiralIn 3.2s cubic-bezier(0.25, 0.1, 0.4, 1) 0.9s forwards;
 }
 
-@keyframes spiralIn {
-  0%   { transform: translate(var(--spiral-radius), -50%) scale(1); opacity: 1; }
-  75%  { opacity: 1; }
-  100% { transform: translate(0, -50%) scale(0.02); opacity: 0; }
+@keyframes rocketSpiralIn {
+  from { transform: translate(150px, -50%) rotate(-45deg); }
+  to   { transform: translate(92px, -50%) rotate(-45deg); }
+}
+
+/* --- เฟส 3: รูปโพลารอยด์จิ๋วพุ่งออกจากจรวดทีละรูป (ตำแหน่ง/เวลาส่งจาก JS) --- */
+.warp-photos {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  width: 0;
+  height: 0;
+}
+
+.warp-photo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 118px;
+  margin-left: -59px;
+  margin-top: -58px;
+  padding: 7px 7px 22px;
+  background: linear-gradient(180deg, #ffffff 0%, #f4f2ec 100%);
+  border-radius: 5px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transform: translate(var(--tx, 0px), var(--ty, 0px)) rotate(var(--tilt, 0deg)) scale(0.05);
+}
+
+.warp-overlay.play .warp-photo {
+  animation: photoPopOut 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) var(--delay, 0ms) forwards;
+}
+
+@keyframes photoPopOut {
+  0%   { opacity: 0; transform: translate(calc(var(--tx, 0px) * 0.12), calc(var(--ty, 0px) * 0.12)) rotate(var(--tilt, 0deg)) scale(0.05); }
+  45%  { opacity: 1; }
+  100% { opacity: 1; transform: translate(var(--tx, 0px), var(--ty, 0px)) rotate(var(--tilt, 0deg)) scale(1); }
+}
+
+.warp-photo img {
+  display: block;
+  width: 100%;
+  height: 86px;
+  object-fit: cover;
+  background: #dcd9d0;
 }
 
 /* ข้อความกำกับแอนิเมชัน */
 .warp-text {
   position: absolute;
-  bottom: 22%;
-  font-size: 1.4rem;
-  color: var(--glow-cyan);
+  bottom: 20%;
+  z-index: 4;
+  font-size: 1.3rem;
+  color: var(--accent-gold);
   letter-spacing: 0.5px;
-  animation: pulse 0.6s ease-in-out infinite alternate;
+  animation: pulse 0.9s ease-in-out infinite alternate;
 }
 
 @keyframes pulse {
@@ -449,9 +477,9 @@ body {
   background: radial-gradient(
     circle at center,
     #ffffff 0%,
-    #dff4ff 25%,
-    rgba(0, 212, 255, 0.7) 55%,
-    rgba(233, 69, 96, 0.35) 78%,
+    #eef7ff 25%,
+    rgba(140, 200, 255, 0.7) 55%,
+    rgba(255, 210, 138, 0.35) 78%,
     transparent 100%
   );
 }
@@ -489,7 +517,7 @@ body {
   transform: translateX(-50%);
   width: 4px;
   height: 100%;
-  background: linear-gradient(180deg, var(--nebula-purple), var(--nebula-pink), var(--glow-cyan));
+  background: linear-gradient(180deg, var(--navy-3), var(--accent-blue), var(--accent-gold));
   border-radius: 2px;
 }
 
@@ -554,7 +582,7 @@ body {
   transform: rotate(0deg) scale(1.04);
   box-shadow:
     0 18px 40px rgba(0, 0, 0, 0.55),
-    0 0 30px rgba(0, 212, 255, 0.25);
+    0 0 30px rgba(109, 185, 255, 0.28);
   z-index: 5;
 }
 
@@ -608,16 +636,16 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
-  background: linear-gradient(135deg, var(--nebula-purple), var(--nebula-pink));
+  background: linear-gradient(135deg, var(--navy-3), var(--accent-blue));
   border-radius: 50%;
-  box-shadow: 0 0 20px rgba(157, 78, 221, 0.5);
+  box-shadow: 0 0 18px rgba(109, 185, 255, 0.4);
   z-index: 10;
 }
 
 .timeline-line {
   width: 2px;
   height: 60px;
-  background: linear-gradient(180deg, var(--nebula-purple), transparent);
+  background: linear-gradient(180deg, var(--accent-blue), transparent);
 }
 
 
@@ -633,16 +661,16 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--nebula-purple);
+  background: var(--navy-3);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--nebula-pink);
+  background: var(--accent-blue);
 }
 
 ::selection {
-  background: var(--nebula-purple);
+  background: var(--navy-3);
   color: var(--star-white);
 }
 
@@ -692,6 +720,15 @@ body {
   .polaroid-photo {
     height: 200px;
   }
+
+  .warp-photos {
+    transform: scale(0.78);
+  }
+
+  .warp-rocket,
+  .warp-rocket-fly {
+    font-size: 3.6rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -711,8 +748,13 @@ body {
     height: 180px;
   }
 
-  /* ลดรัศมีเกลียวของจรวดให้พอดีกับจอเล็ก */
-  :root {
-    --spiral-radius: 150px;
+  /* ย่อวงรูปรอบจรวดและตัวจรวดบนจอเล็ก */
+  .warp-photos {
+    transform: scale(0.6);
+  }
+
+  .warp-rocket,
+  .warp-rocket-fly {
+    font-size: 3rem;
   }
 }

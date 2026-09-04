@@ -51,30 +51,30 @@
 
             <button class="start-btn" id="startBtn">
               <span class="btn-text">✨ สตาร์ทการเดินทางอวกาศของเรา</span>
-              <span class="btn-icon">🚀💕🌌</span>
+              <span class="btn-icon">🚀🌌</span>
             </button>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ===== Overlay: Black Hole Warp Transition ===== -->
+    <!-- ===== Overlay: Rocket Warp Transition ===== -->
     <div class="warp-overlay" id="warpOverlay" aria-hidden="true">
-      <!-- หลุมดำกลางจอ (แกนดำ + วงแหวนฝุ่นร้อบหมุนรอบ) -->
-      <div class="black-hole">
-        <div class="black-hole-accretion"></div>
-        <div class="black-hole-core"></div>
-      </div>
+      <!-- เฟส 1: จรวดพุ่งเข้ามาจากขอบขวาของจอ -->
+      <div class="warp-rocket-fly">🚀</div>
 
-      <!-- จรวดหมุนเกลียวถูกดูดเข้าหลุมดำ (orbit หมุนรอบ + spiral หดรัศมี) -->
+      <!-- เฟส 2: จรวดบินวนเป็นเกลียว/วงกลมกลางจอ -->
       <div class="warp-rocket-orbit">
         <div class="warp-rocket">🚀</div>
       </div>
 
-      <div class="warp-text">กำลังดึงดูดเข้าสู่หลุมดำ...</div>
+      <!-- เฟส 3: รูปโพลารอยด์พุ่งออกจากจรวดทีละรูป (สร้างแบบ dynamic ใน app.js) -->
+      <div class="warp-photos" id="warpPhotos"></div>
+
+      <div class="warp-text">🚀 กำลังรวบรวมความทรงจำจากจักรวาล...</div>
     </div>
 
-    <!-- แสงวาร์ปวาบ (Warp Flash) — แสดงตอนจรวดถึงจุดศูนย์กลางหลุมดำ -->
+    <!-- แสงวาร์ปวาบ (Warp Flash) — ปิดท้ายก่อนเข้าสู่ Timeline -->
     <div class="warp-flash" id="warpFlash" aria-hidden="true"></div>
 
     <!-- ===== Section 2: Timeline — โชว์รูปภาพความทรงจำ ===== -->
