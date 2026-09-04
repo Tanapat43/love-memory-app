@@ -5,9 +5,9 @@
    1. Elements & State
    2. Background Effects (ดาว / หัวใจลอย)
    3. Photo Handling (อัปโหลด / จัดเก็บ / ตัวอย่าง)
-   4. Timeline (สร้าง + reveal ทีละรูป)
+   4. Timeline — Polaroid Photos (สร้าง + reveal ทีละรูป)
    5. Black Hole Warp Transition
-   6. Scroll (เข้าสู่ Timeline + Auto Smooth Scroll)
+   6. Auto Smooth Scroll
    7. Flow Control (เริ่มการเดินทาง)
    8. Event Listeners
    ========================================================= */
@@ -19,6 +19,7 @@
    1. Elements & State
    ========================================= */
 const startBtn = document.getElementById('startBtn');
+const hero = document.getElementById('hero');
 const timelineSection = document.getElementById('timelineSection');
 const timeline = document.getElementById('timeline');
 const starsBg = document.getElementById('starsBg');
@@ -140,7 +141,21 @@ function handlePhotoSelect(e) {
    4. Timeline
    ========================================= */
 
-// สร้าง Timeline รูปภาพ สลับซ้าย-ขวาตามแนวเส้นกลาง
+// คำโปรยสั้นๆ ใต้รูปโพลารอยด์ (วนซ้ำตามจำนวนรูป)
+const POLAROID_CAPTIONS = [
+  '⭐ ความทรงจำของเรา',
+  '💕 อยู่ด้วยกันทุกวัน',
+  '🌌 รักกว้างเท่าจักรวาล',
+  '✨ โมเมนต์ที่ดีที่สุด',
+  '💖 เธอคือที่สุด',
+  '🚀 เดินทางไปด้วยกัน',
+  '💫 ดาวดวงของฉัน',
+  '🌸 วันที่แสนวิเศษ',
+  '🩷 หัวใจของเรา',
+  '🔭 ก้าวต่อไปด้วยกัน',
+];
+
+// สร้าง Timeline รูปโพลารอยด์ สลับซ้าย-ขวาตามแนวเส้นกลาง + เอียงสุ่มเหมือนวางบนโต๊ะ
 function createTimeline() {
   const count = Math.min(parseInt(displayCount.value, 10) || selectedPhotos.length, selectedPhotos.length);
   const photosToShow = selectedPhotos.slice(0, count);
@@ -151,16 +166,27 @@ function createTimeline() {
   photosToShow.forEach((photo, index) => {
     const item = document.createElement('div');
     item.className = 'timeline-item ' + (index % 2 === 0 ? 'left' : 'right');
-    item.innerHTML = `
-      <div class="timeline-card">
-        <div class="card-image">
-          <img src="${photo}" alt="Photo ${index + 1}" />
-        </div>
+
+    // โพลารอยด์: เอียงสุ่ม -5 ถึง 5 องศา
+    const polaroid = document.createElement('div');
+    polaroid.className = 'polaroid';
+    const tilt = (Math.random() * 10 - 5).toFixed(2);
+    polaroid.style.setProperty('--tilt', tilt + 'deg');
+    polaroid.innerHTML = `
+      <div class="polaroid-photo">
+        <img src="${photo}" alt="Photo ${index + 1}" />
       </div>
-      <div class="timeline-connector">
-        <div class="timeline-dot">${dots[index % dots.length]}</div>
-        <div class="timeline-line"></div>
-      </div>`;
+      <div class="polaroid-caption">${POLAROID_CAPTIONS[index % POLAROID_CAPTIONS.length]}</div>`;
+
+    // จุดเชื่อมบนเส้น Timeline
+    const connector = document.createElement('div');
+    connector.className = 'timeline-connector';
+    connector.innerHTML = `
+      <div class="timeline-dot">${dots[index % dots.length]}</div>
+      <div class="timeline-line"></div>`;
+
+    item.appendChild(polaroid);
+    item.appendChild(connector);
     timeline.appendChild(item);
   });
 
@@ -216,45 +242,8 @@ function playWarpAnimation() {
 
 
 /* =========================================
-   6. Scroll (เข้าสู่ Timeline + Auto Smooth Scroll)
+   6. Auto Smooth Scroll
    ========================================= */
-
-// เลื่อนจาก Hero เข้าสู่ตำแหน่งเริ่มต้นของ Timeline (ครั้งเดียว 1.5 วินาที)
-function smoothScrollToTimeline() {
-  return new Promise((resolve) => {
-    timelineSection.hidden = false;
-    // ปิด scroll-behavior ของ CSS ชั่วคราว เพื่อคุมการเลื่อนเองทีละเฟรม
-    document.documentElement.style.scrollBehavior = 'auto';
-
-    requestAnimationFrame(() => {
-      const targetPosition = timelineSection.offsetTop - 20;
-      const startPosition = window.pageYOffset;
-      const distance = targetPosition - startPosition;
-      const duration = 1500;
-      let startTime = null;
-
-      function animationScroll(currentTime) {
-        if (startTime === null) startTime = currentTime;
-        const timeElapsed = currentTime - startTime;
-        const progress = Math.min(timeElapsed / duration, 1);
-        const ease = progress < 0.5
-          ? 4 * progress * progress * progress
-          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-
-        window.scrollTo(0, startPosition + distance * ease);
-
-        if (timeElapsed < duration) {
-          requestAnimationFrame(animationScroll);
-        } else {
-          document.documentElement.style.scrollBehavior = '';
-          resolve();
-        }
-      }
-
-      requestAnimationFrame(animationScroll);
-    });
-  });
-}
 
 /* --- Auto Smooth Scroll: เลื่อนจอลงอัตโนมัติอย่างช้าๆ นุ่มนวล --- */
 const AUTO_SCROLL_SPEED = 90; // ความเร็วเลื่อนอัตโนมัติ (พิกเซล/วินาที)
@@ -338,7 +327,7 @@ function pauseAutoScroll() {
    7. Flow Control
    ========================================= */
 
-// คลิกปุ่มสตาร์ท: สร้าง Timeline -> หลุมดำ+วาร์ป -> เปลี่ยนหน้า -> Auto-Scroll โชว์รูปทีละใบ
+// คลิกปุ่มสตาร์ท: สร้าง Timeline -> หลุมดำ+วาร์ป -> สลับ Landing Page เป็น Timeline -> Auto-Scroll โชว์รูปทีละใบ
 async function startStory() {
   if (selectedPhotos.length === 0) {
     alert('Please select photos first!');
@@ -348,8 +337,16 @@ async function startStory() {
   stopAutoScroll();
   createTimeline();
   await playWarpAnimation();
-  await smoothScrollToTimeline();
+  switchToTimeline();
   startAutoScroll();
+}
+
+// ซ่อน Landing Page (Hero) ทั้งหมด แล้วแสดง Story Section (Timeline) ขึ้นมาแทน
+function switchToTimeline() {
+  document.documentElement.style.scrollBehavior = 'auto';
+  window.scrollTo(0, 0);
+  hero.hidden = true;
+  timelineSection.hidden = false;
 }
 
 

@@ -7,7 +7,7 @@
    3. Hero Section
    4. Upload Section (เลือกรูป / ตัวอย่าง / ปุ่มสตาร์ท)
    5. Black Hole Warp Transition (หลุมดำ + จรวดเกลียว + แสงวาบ)
-   6. Timeline Section
+   6. Timeline Section (Polaroid Photos)
    7. Utilities (Scrollbar / Selection)
    8. Responsive
    ========================================================= */
@@ -22,6 +22,11 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+/* บังคับซ่อนทุก element ที่มี attribute hidden (เช่น Hero ตอนสลับเข้าสู่ Timeline) */
+[hidden] {
+  display: none !important;
 }
 
 :root {
@@ -462,7 +467,7 @@ body {
 }
 
 /* -------------------------------------------
-   6. Timeline Section
+   6. Timeline Section (Polaroid Photos)
    ------------------------------------------- */
 .timeline-section {
   padding: 4rem 2rem 6rem;
@@ -492,6 +497,7 @@ body {
 .timeline-item {
   display: flex;
   align-items: center;
+  position: relative;
   margin-bottom: 3rem;
   opacity: 0;
   transform: translateY(30px);
@@ -503,56 +509,96 @@ body {
   transform: translateY(0);
 }
 
-/* สลับซ้าย-ขวารอบเส้นกลาง */
+/* สลับซ้าย-ขวารอบเส้นกลาง (เว้นระยะกลางให้จุดเชื่อมวางตรงเส้นพอดี) */
 .timeline-item.left {
   flex-direction: row;
-  padding-right: calc(50% + 30px);
+  padding-right: calc(50% + 40px);
 }
 
 .timeline-item.right {
   flex-direction: row-reverse;
-  padding-left: calc(50% + 30px);
+  padding-left: calc(50% + 40px);
 }
 
-.timeline-card {
+/* รูปโพลารอยด์: กรอบขาว ขอบล่างหนาใส่ข้อความ + เอียงสุ่มเหมือนวางบนโต๊ะ */
+.polaroid {
+  position: relative;
   flex: 1;
-  background: linear-gradient(135deg, var(--space-purple), var(--space-blue));
-  border-radius: 20px;
-  overflow: hidden;
-  border: 2px solid var(--nebula-purple);
-  box-shadow: 0 0 30px rgba(157, 78, 221, 0.3);
-  transition: all 0.3s ease;
+  padding: 14px 14px 8px;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f4ee 100%);
+  border-radius: 8px;
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.5),
+    0 3px 8px rgba(0, 0, 0, 0.35);
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
 }
 
-.timeline-card:hover {
-  transform: translateY(-5px) scale(1.02);
-  box-shadow: 0 0 50px rgba(233, 69, 96, 0.5);
-  border-color: var(--nebula-pink);
+/* เทปกาด้านบนรูป */
+.polaroid::before {
+  content: '';
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  width: 92px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.28);
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  transform: translateX(-50%) rotate(-3deg);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
-.card-image {
+/* วางเมาส์: ตั้งรูปให้ตรง + ยกขึ้นเล็กน้อย */
+.polaroid:hover {
+  transform: rotate(0deg) scale(1.04);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.55),
+    0 0 30px rgba(0, 212, 255, 0.25);
+  z-index: 5;
+}
+
+.polaroid-photo {
   width: 100%;
   height: 300px;
   overflow: hidden;
-  background: var(--space-purple);
+  background: #dcd9d0;
 }
 
-.card-image img {
+.polaroid-photo img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   transition: transform 0.5s ease;
 }
 
-.timeline-card:hover .card-image img {
-  transform: scale(1.08);
+.polaroid:hover .polaroid-photo img {
+  transform: scale(1.06);
 }
 
+/* ขอบล่างหนา: ข้อความสั้นๆ ใต้รูป */
+.polaroid-caption {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px 2px;
+  font-size: 1.02rem;
+  color: #55506b;
+  letter-spacing: 0.3px;
+  text-align: center;
+}
+
+/* จุดเชื่อมกลางเส้น Timeline พอดี (dot กว้าง 50px) */
 .timeline-connector {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 1rem;
 }
 
 .timeline-dot {
@@ -638,12 +684,12 @@ body {
     padding-right: 0;
   }
 
+  /* จุดเชื่อมชิดเส้นซ้าย (เส้นอยู่ที่ 30-34px, dot กว้าง 50px) */
   .timeline-connector {
-    position: absolute;
-    left: 10px;
+    left: 32px;
   }
 
-  .card-image {
+  .polaroid-photo {
     height: 200px;
   }
 }
@@ -661,7 +707,7 @@ body {
     padding: 2rem 0.5rem 4rem;
   }
 
-  .card-image {
+  .polaroid-photo {
     height: 180px;
   }
 
