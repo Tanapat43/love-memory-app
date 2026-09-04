@@ -5,9 +5,7 @@ const startBtn = document.getElementById('startBtn');
 const hero = document.getElementById('hero');
 const timelineSection = document.getElementById('timelineSection');
 const timeline = document.getElementById('timeline');
-const finale = document.getElementById('finale');
 const starsBg = document.getElementById('starsBg');
-const restartBtn = document.getElementById('restartBtn');
 const photoInput = document.getElementById('photoInput');
 const uploadBtn = document.getElementById('uploadBtn');
 const previewSection = document.getElementById('previewSection');
@@ -117,6 +115,7 @@ function createTimeline() {
     item.innerHTML = '<div class="timeline-card"><div class="card-image"><img src="' + photo + '" alt="Photo ' + (index + 1) + '" /></div></div><div class="timeline-connector"><div class="timeline-dot">' + dots[dotIndex] + '</div><div class="timeline-line"></div></div>';
     timeline.appendChild(item);
   });
+  setupTimelineReveal();
 }
 
 function playWarpAnimation() {
@@ -130,61 +129,148 @@ function playWarpAnimation() {
 }
 
 function smoothScrollToTimeline() {
-  timelineSection.hidden = false;
-  finale.hidden = false;
-  requestAnimationFrame(() => {
-    const targetPosition = timelineSection.offsetTop - 20;
-    const startPosition = window.pageYOffset;
-    const distance = targetPosition - startPosition;
-    const duration = 1500;
-    let startTime = null;
-    function animationScroll(currentTime) {
-      if (startTime === null) startTime = currentTime;
-      const timeElapsed = currentTime - startTime;
-      const progress = Math.min(timeElapsed / duration, 1);
-      const ease = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-      window.scrollTo(0, startPosition + distance * ease);
-      if (timeElapsed < duration) {
-        requestAnimationFrame(animationScroll);
+  return new Promise(resolve => {
+    timelineSection.hidden = false;
+    // ปิด scroll-behavior ของ CSS ชั่วคราว เพื่อคุมการเลื่อนเองทีละเฟรม
+    document.documentElement.style.scrollBehavior = 'auto';
+    requestAnimationFrame(() => {
+      const targetPosition = timelineSection.offsetTop - 20;
+      const startPosition = window.pageYOffset;
+      const distance = targetPosition - startPosition;
+      const duration = 1500;
+      let startTime = null;
+      function animationScroll(currentTime) {
+        if (startTime === null) startTime = currentTime;
+        const timeElapsed = currentTime - startTime;
+        const progress = Math.min(timeElapsed / duration, 1);
+        const ease = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        window.scrollTo(0, startPosition + distance * ease);
+        if (timeElapsed < duration) {
+          requestAnimationFrame(animationScroll);
+        } else {
+          document.documentElement.style.scrollBehavior = '';
+          resolve();
+        }
       }
-    }
-    requestAnimationFrame(animationScroll);
+      requestAnimationFrame(animationScroll);
+    });
   });
 }
 
-function animateTimelineItems() {
-  const items = document.querySelectorAll('.timeline-item');
-  items.forEach((item, index) => {
-    setTimeout(() => {
-      item.classList.add('visible');
-    }, index * 300);
-  });
+/* =========================================================
+   Auto Smooth Scroll — เลื่อนจอลงอัตโนมัติอย่างช้าๆ นุ่มนวล
+   ========================================================= */
+const AUTO_SCROLL_SPEED = 90;  // ความเร็วเลื่อนอัตโนมัติ (พิกเซล/วินาที)
+const RESUME_DELAY = 2500;     // เวลาพัก (มิลลิวินาที) หลังผู้ใช้แตะ/เลื่อนเอง ก่อนกลับมาเลื่อนต่อ
+
+let autoScrollRafId = null;
+let autoScrollPaused = false;
+let autoScrollLastTime = null;
+let autoScrollStartTime = 0;
+let resumeTimeout = null;
+
+function isAutoScrollRunning() {
+  return autoScrollRafId !== null;
 }
+
+function startAutoScroll() {
+  stopAutoScroll();
+  autoScrollPaused = false;
+  autoScrollLastTime = null;
+  autoScrollStartTime = performance.now();
+  // ปิด scroll-behavior ของ CSS ชั่วคราว ไม่ให้ตีกับการเลื่อนทีละเฟรม
+  document.documentElement.style.scrollBehavior = 'auto';
+  autoScrollRafId = requestAnimationFrame(autoScrollStep);
+}
+
+function autoScrollStep(timestamp) {
+  if (autoScrollLastTime === null) autoScrollLastTime = timestamp;
+  // จำกัด delta ไม่ให้หน้ากระโดด เมื่อสลับแท็บแล้วกลับมา
+  const delta = Math.min(timestamp - autoScrollLastTime, 100);
+  autoScrollLastTime = timestamp;
+
+  if (!autoScrollPaused && delta > 0) {
+    // ค่อยๆ เร่งความเร็วในช่วงต้น เพื่อให้เริ่มเลื่อนอย่างนุ่มนวล
+    const elapsed = timestamp - autoScrollStartTime;
+    const ease = Math.min(elapsed / 800, 1);
+    const speed = AUTO_SCROLL_SPEED * (0.4 + 0.6 * ease);
+    window.scrollBy(0, (speed * delta) / 1000);
+
+    // ถ้าเลื่อนถึงสุดหน้าแล้ว ให้หยุด Auto-Scroll
+    const bottomReached = Math.ceil(window.innerHeight + window.pageYOffset) >= document.documentElement.scrollHeight - 2;
+    if (bottomReached) {
+      stopAutoScroll();
+      return;
+    }
+  }
+  autoScrollRafId = requestAnimationFrame(autoScrollStep);
+}
+
+function stopAutoScroll() {
+  if (autoScrollRafId !== null) {
+    cancelAnimationFrame(autoScrollRafId);
+    autoScrollRafId = null;
+  }
+  autoScrollPaused = false;
+  if (resumeTimeout) {
+    clearTimeout(resumeTimeout);
+    resumeTimeout = null;
+  }
+  document.documentElement.style.scrollBehavior = '';
+}
+
+// ผู้ใช้สัมผัสหน้าจอ/เลื่อนเอง → หยุดชั่วคราว แล้วกลับมาเลื่อนต่อเองเมื่อผู้ใช้หยุดพัก
+function pauseAutoScroll() {
+  if (!isAutoScrollRunning() || autoScrollPaused) return;
+  autoScrollPaused = true;
+  if (resumeTimeout) clearTimeout(resumeTimeout);
+  resumeTimeout = setTimeout(() => {
+    resumeTimeout = null;
+    if (isAutoScrollRunning()) {
+      autoScrollPaused = false;
+      autoScrollLastTime = null;
+    }
+  }, RESUME_DELAY);
+}
+
+// ทำให้รูปแต่ละใบปรากฏทีละใบ เมื่อเลื่อนเข้ามาในหน้าจอ (sync กับ Auto-Scroll เสมอ)
+let revealObserver = null;
+
+function setupTimelineReveal() {
+  if (revealObserver) revealObserver.disconnect();
+  revealObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -12% 0px' });
+  document.querySelectorAll('.timeline-item').forEach(item => revealObserver.observe(item));
+}
+
+// แตะจอ / เลื่อนเมาส์ / ใช้คีย์เลื่อนหน้า → หยุด Auto-Scroll ชั่วคราว
+['wheel', 'touchstart', 'touchmove'].forEach(evtName => {
+  window.addEventListener(evtName, pauseAutoScroll, { passive: true });
+});
+window.addEventListener('keydown', e => {
+  const scrollKeys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ', 'Spacebar'];
+  if (scrollKeys.includes(e.key)) pauseAutoScroll();
+});
 
 async function startStory() {
   if (selectedPhotos.length === 0) {
     alert('Please select photos first!');
     return;
   }
+  stopAutoScroll();
   createTimeline();
   await playWarpAnimation();
-  smoothScrollToTimeline();
-  setTimeout(() => {
-    animateTimelineItems();
-  }, 1600);
-}
-
-function restartStory() {
-  timelineSection.hidden = true;
-  finale.hidden = true;
-  document.querySelectorAll('.timeline-item').forEach(item => {
-    item.classList.remove('visible');
-  });
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  await smoothScrollToTimeline();
+  startAutoScroll();
 }
 
 if (startBtn) startBtn.addEventListener('click', startStory);
-if (restartBtn) restartBtn.addEventListener('click', restartStory);
 if (uploadBtn) uploadBtn.addEventListener('click', () => photoInput.click());
 if (photoInput) photoInput.addEventListener('change', handlePhotoSelect);
 
