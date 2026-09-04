@@ -1,8 +1,24 @@
+/* =========================================================
+   Space Love Story — App Script
+   ---------------------------------------------------------
+   สารบัญ
+   1. Elements & State
+   2. Background Effects (ดาว / หัวใจลอย)
+   3. Photo Handling (อัปโหลด / จัดเก็บ / ตัวอย่าง)
+   4. Timeline (สร้าง + reveal ทีละรูป)
+   5. Black Hole Warp Transition
+   6. Scroll (เข้าสู่ Timeline + Auto Smooth Scroll)
+   7. Flow Control (เริ่มการเดินทาง)
+   8. Event Listeners
+   ========================================================= */
 
 'use strict';
 
+
+/* =========================================
+   1. Elements & State
+   ========================================= */
 const startBtn = document.getElementById('startBtn');
-const hero = document.getElementById('hero');
 const timelineSection = document.getElementById('timelineSection');
 const timeline = document.getElementById('timeline');
 const starsBg = document.getElementById('starsBg');
@@ -13,9 +29,16 @@ const thumbnailsContainer = document.getElementById('thumbnailsContainer');
 const photoCount = document.getElementById('photoCount');
 const displayCount = document.getElementById('displayCount');
 const warpOverlay = document.getElementById('warpOverlay');
+const warpFlash = document.getElementById('warpFlash');
 
 let selectedPhotos = [];
 
+
+/* =========================================
+   2. Background Effects
+   ========================================= */
+
+// สร้างดาวระยิบระยับบนพื้นหลัง
 function createStars() {
   const starCount = 150;
   for (let i = 0; i < starCount; i++) {
@@ -24,7 +47,7 @@ function createStars() {
     star.style.left = Math.random() * 100 + '%';
     star.style.top = Math.random() * 100 + '%';
     star.style.animationDelay = Math.random() * 3 + 's';
-    star.style.animationDuration = (2 + Math.random() * 3) + 's';
+    star.style.animationDuration = 2 + Math.random() * 3 + 's';
     const size = Math.random() * 2 + 1;
     star.style.width = size + 'px';
     star.style.height = size + 'px';
@@ -32,6 +55,7 @@ function createStars() {
   }
 }
 
+// สร้างหัวใจ/ดาวลอยขึ้นจากล่างจอ
 function createFloatingHearts() {
   const heartEmojis = ['❤️', '💕', '💖', '✨', '🌟', '💫'];
   const heartCount = 15;
@@ -41,12 +65,18 @@ function createFloatingHearts() {
     heart.textContent = heartEmojis[Math.floor(Math.random() * heartEmojis.length)];
     heart.style.left = Math.random() * 100 + '%';
     heart.style.animationDelay = Math.random() * 20 + 's';
-    heart.style.animationDuration = (15 + Math.random() * 15) + 's';
-    heart.style.fontSize = (1 + Math.random() * 2) + 'rem';
+    heart.style.animationDuration = 15 + Math.random() * 15 + 's';
+    heart.style.fontSize = 1 + Math.random() * 2 + 'rem';
     starsBg.appendChild(heart);
   }
 }
 
+
+/* =========================================
+   3. Photo Handling
+   ========================================= */
+
+// โหลดรูปที่เคยเลือกไว้จาก localStorage
 function loadPhotosFromStorage() {
   try {
     const stored = localStorage.getItem('spaceLovePhotos');
@@ -63,6 +93,7 @@ function loadPhotosFromStorage() {
   }
 }
 
+// บันทึกรูปที่เลือกลง localStorage
 function savePhotosToStorage() {
   try {
     localStorage.setItem('spaceLovePhotos', JSON.stringify(selectedPhotos));
@@ -71,6 +102,7 @@ function savePhotosToStorage() {
   }
 }
 
+// แสดงรูปตัวอย่างใน Hero
 function displayThumbnails() {
   thumbnailsContainer.innerHTML = '';
   selectedPhotos.forEach((photo, index) => {
@@ -83,68 +115,134 @@ function displayThumbnails() {
   photoCount.textContent = selectedPhotos.length;
 }
 
+// จัดการเมื่อผู้ใช้เลือกรูปจากเครื่อง
 function handlePhotoSelect(e) {
   const files = Array.from(e.target.files);
   if (files.length === 0) return;
-  files.forEach(file => {
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        selectedPhotos.push(event.target.result);
-        displayThumbnails();
-        savePhotosToStorage();
-        previewSection.hidden = false;
-        displayCount.max = selectedPhotos.length;
-        displayCount.value = Math.min(selectedPhotos.length, 10);
-      };
-      reader.readAsDataURL(file);
-    }
+
+  files.forEach((file) => {
+    if (!file.type.startsWith('image/')) return;
+
+    const reader = new FileReader();
+    reader.onload = function (event) {
+      selectedPhotos.push(event.target.result);
+      displayThumbnails();
+      savePhotosToStorage();
+      previewSection.hidden = false;
+      displayCount.max = selectedPhotos.length;
+      displayCount.value = Math.min(selectedPhotos.length, 10);
+    };
+    reader.readAsDataURL(file);
   });
 }
 
+/* =========================================
+   4. Timeline
+   ========================================= */
+
+// สร้าง Timeline รูปภาพ สลับซ้าย-ขวาตามแนวเส้นกลาง
 function createTimeline() {
-  const count = Math.min(parseInt(displayCount.value) || selectedPhotos.length, selectedPhotos.length);
+  const count = Math.min(parseInt(displayCount.value, 10) || selectedPhotos.length, selectedPhotos.length);
   const photosToShow = selectedPhotos.slice(0, count);
-  timeline.innerHTML = '';
   const dots = ['❤️', '💕', '💖', '✨', '🌟', '💫', '🦋', '🌸', '💝', '🩷'];
+
+  timeline.innerHTML = '';
+
   photosToShow.forEach((photo, index) => {
-    const isLeft = index % 2 === 0;
     const item = document.createElement('div');
-    item.className = 'timeline-item ' + (isLeft ? 'left' : 'right');
-    const dotIndex = index % dots.length;
-    item.innerHTML = '<div class="timeline-card"><div class="card-image"><img src="' + photo + '" alt="Photo ' + (index + 1) + '" /></div></div><div class="timeline-connector"><div class="timeline-dot">' + dots[dotIndex] + '</div><div class="timeline-line"></div></div>';
+    item.className = 'timeline-item ' + (index % 2 === 0 ? 'left' : 'right');
+    item.innerHTML = `
+      <div class="timeline-card">
+        <div class="card-image">
+          <img src="${photo}" alt="Photo ${index + 1}" />
+        </div>
+      </div>
+      <div class="timeline-connector">
+        <div class="timeline-dot">${dots[index % dots.length]}</div>
+        <div class="timeline-line"></div>
+      </div>`;
     timeline.appendChild(item);
   });
+
   setupTimelineReveal();
 }
 
+// ทำให้รูปแต่ละใบปรากฏทีละใบ เมื่อเลื่อนเข้ามาในหน้าจอ (sync กับ Auto-Scroll เสมอ)
+let revealObserver = null;
+
+function setupTimelineReveal() {
+  if (revealObserver) revealObserver.disconnect();
+
+  revealObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.15, rootMargin: '0px 0px -12% 0px' }
+  );
+
+  document.querySelectorAll('.timeline-item').forEach((item) => revealObserver.observe(item));
+}
+
+/* =========================================
+   5. Black Hole Warp Transition
+   ========================================= */
+const WARP_SPIRAL_MS = 2400; // เวลาที่จรวดหมุนเกลียวถูกดูดเข้าหลุมดำ
+const WARP_FLASH_MS = 850;   // ความยาวของแสงวาร์ปวาบ
+
+// เล่นแอนิเมชัน: จรวดหมุนเกลียวเข้าหลุมดำ -> แสงวาร์ปวาบ -> เปลี่ยนหน้าจอ
 function playWarpAnimation() {
-  return new Promise(resolve => {
-    warpOverlay.classList.add('active');
+  return new Promise((resolve) => {
+    // เปิด Overlay และเริ่มแอนิเมชันจรวดหมุนเกลียว (CSS ผูกกับคลาส .play)
+    warpOverlay.classList.add('active', 'play');
+
+    // จรวดถึงจุดศูนย์กลางหลุมดำ -> เปิดแสงวาร์ปวาบ
+    setTimeout(() => warpFlash.classList.add('flash'), WARP_SPIRAL_MS);
+
+    // เปลี่ยนหน้าจอช่วงที่แสงสว่างที่สุด เพื่อให้ต่อเนื่องเป็นธรรมชาติ
+    setTimeout(resolve, WARP_SPIRAL_MS + 380);
+
+    // ล้าง Overlay และคลาสแอนิเมชันหลังแสงจางหมด
     setTimeout(() => {
-      warpOverlay.classList.remove('active');
-      resolve();
-    }, 2000);
+      warpOverlay.classList.remove('active', 'play');
+      warpFlash.classList.remove('flash');
+    }, WARP_SPIRAL_MS + WARP_FLASH_MS);
   });
 }
 
+
+/* =========================================
+   6. Scroll (เข้าสู่ Timeline + Auto Smooth Scroll)
+   ========================================= */
+
+// เลื่อนจาก Hero เข้าสู่ตำแหน่งเริ่มต้นของ Timeline (ครั้งเดียว 1.5 วินาที)
 function smoothScrollToTimeline() {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     timelineSection.hidden = false;
     // ปิด scroll-behavior ของ CSS ชั่วคราว เพื่อคุมการเลื่อนเองทีละเฟรม
     document.documentElement.style.scrollBehavior = 'auto';
+
     requestAnimationFrame(() => {
       const targetPosition = timelineSection.offsetTop - 20;
       const startPosition = window.pageYOffset;
       const distance = targetPosition - startPosition;
       const duration = 1500;
       let startTime = null;
+
       function animationScroll(currentTime) {
         if (startTime === null) startTime = currentTime;
         const timeElapsed = currentTime - startTime;
         const progress = Math.min(timeElapsed / duration, 1);
-        const ease = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        const ease = progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
         window.scrollTo(0, startPosition + distance * ease);
+
         if (timeElapsed < duration) {
           requestAnimationFrame(animationScroll);
         } else {
@@ -152,16 +250,15 @@ function smoothScrollToTimeline() {
           resolve();
         }
       }
+
       requestAnimationFrame(animationScroll);
     });
   });
 }
 
-/* =========================================================
-   Auto Smooth Scroll — เลื่อนจอลงอัตโนมัติอย่างช้าๆ นุ่มนวล
-   ========================================================= */
-const AUTO_SCROLL_SPEED = 90;  // ความเร็วเลื่อนอัตโนมัติ (พิกเซล/วินาที)
-const RESUME_DELAY = 2500;     // เวลาพัก (มิลลิวินาที) หลังผู้ใช้แตะ/เลื่อนเอง ก่อนกลับมาเลื่อนต่อ
+/* --- Auto Smooth Scroll: เลื่อนจอลงอัตโนมัติอย่างช้าๆ นุ่มนวล --- */
+const AUTO_SCROLL_SPEED = 90; // ความเร็วเลื่อนอัตโนมัติ (พิกเซล/วินาที)
+const RESUME_DELAY = 2500;    // เวลาพัก (มิลลิวินาที) หลังผู้ใช้แตะ/เลื่อนเอง ก่อนกลับมาเลื่อนต่อ
 
 let autoScrollRafId = null;
 let autoScrollPaused = false;
@@ -196,13 +293,16 @@ function autoScrollStep(timestamp) {
     const speed = AUTO_SCROLL_SPEED * (0.4 + 0.6 * ease);
     window.scrollBy(0, (speed * delta) / 1000);
 
-    // ถ้าเลื่อนถึงสุดหน้าแล้ว ให้หยุด Auto-Scroll
-    const bottomReached = Math.ceil(window.innerHeight + window.pageYOffset) >= document.documentElement.scrollHeight - 2;
+    // เลื่อนถึงสุดหน้าแล้วให้หยุด
+    const bottomReached =
+      Math.ceil(window.innerHeight + window.pageYOffset) >=
+      document.documentElement.scrollHeight - 2;
     if (bottomReached) {
       stopAutoScroll();
       return;
     }
   }
+
   autoScrollRafId = requestAnimationFrame(autoScrollStep);
 }
 
@@ -219,7 +319,7 @@ function stopAutoScroll() {
   document.documentElement.style.scrollBehavior = '';
 }
 
-// ผู้ใช้สัมผัสหน้าจอ/เลื่อนเอง → หยุดชั่วคราว แล้วกลับมาเลื่อนต่อเองเมื่อผู้ใช้หยุดพัก
+// ผู้ใช้สัมผัสหน้าจอ/เลื่อนเอง -> หยุดชั่วคราว แล้วกลับมาเลื่อนต่อเองเมื่อผู้ใช้หยุดพัก
 function pauseAutoScroll() {
   if (!isAutoScrollRunning() || autoScrollPaused) return;
   autoScrollPaused = true;
@@ -233,42 +333,39 @@ function pauseAutoScroll() {
   }, RESUME_DELAY);
 }
 
-// ทำให้รูปแต่ละใบปรากฏทีละใบ เมื่อเลื่อนเข้ามาในหน้าจอ (sync กับ Auto-Scroll เสมอ)
-let revealObserver = null;
 
-function setupTimelineReveal() {
-  if (revealObserver) revealObserver.disconnect();
-  revealObserver = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-        revealObserver.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.15, rootMargin: '0px 0px -12% 0px' });
-  document.querySelectorAll('.timeline-item').forEach(item => revealObserver.observe(item));
-}
+/* =========================================
+   7. Flow Control
+   ========================================= */
 
-// แตะจอ / เลื่อนเมาส์ / ใช้คีย์เลื่อนหน้า → หยุด Auto-Scroll ชั่วคราว
-['wheel', 'touchstart', 'touchmove'].forEach(evtName => {
-  window.addEventListener(evtName, pauseAutoScroll, { passive: true });
-});
-window.addEventListener('keydown', e => {
-  const scrollKeys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ', 'Spacebar'];
-  if (scrollKeys.includes(e.key)) pauseAutoScroll();
-});
-
+// คลิกปุ่มสตาร์ท: สร้าง Timeline -> หลุมดำ+วาร์ป -> เปลี่ยนหน้า -> Auto-Scroll โชว์รูปทีละใบ
 async function startStory() {
   if (selectedPhotos.length === 0) {
     alert('Please select photos first!');
     return;
   }
+
   stopAutoScroll();
   createTimeline();
   await playWarpAnimation();
   await smoothScrollToTimeline();
   startAutoScroll();
 }
+
+
+/* =========================================
+   8. Event Listeners
+   ========================================= */
+
+// แตะจอ / เลื่อนเมาส์ / ใช้คีย์เลื่อนหน้า -> หยุด Auto-Scroll ชั่วคราว
+['wheel', 'touchstart', 'touchmove'].forEach((evtName) => {
+  window.addEventListener(evtName, pauseAutoScroll, { passive: true });
+});
+
+window.addEventListener('keydown', (e) => {
+  const scrollKeys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ', 'Spacebar'];
+  if (scrollKeys.includes(e.key)) pauseAutoScroll();
+});
 
 if (startBtn) startBtn.addEventListener('click', startStory);
 if (uploadBtn) uploadBtn.addEventListener('click', () => photoInput.click());
