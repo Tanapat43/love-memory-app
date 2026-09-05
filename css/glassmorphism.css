@@ -1,0 +1,371 @@
+/* =========================================================
+   Space Love Story — Glassmorphism & Neon FX
+   ---------------------------------------------------------
+   ดีไซน์แผ่นกระจกใส + ขอบเรืองแสงนีออน + เอฟเฟกต์ฮอโลแกรม
+   ใช้ร่วมกับ Design Tokens จาก css/main.css
+
+   สารบัญ
+   1. Glass Panels (พื้นกระจก + ขอบนีออนไล่สี)
+   2. Neon Buttons & Chips (ปุ่ม/ป้ายเรืองแสง)
+   3. Glass Frame Cards (การ์ดรูปในแกลเลอรี)
+   4. 3D Tilt & Glare (เอียงตามเมาส์ + แสงวาบ)
+   5. Hologram Rings & Orbit Particles
+   6. Reduced Motion
+   ========================================================= */
+
+
+/* -------------------------------------------
+   1. Glass Panels
+   ------------------------------------------- */
+.glass-panel {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid var(--glass-border);
+  border-radius: 22px;
+  box-shadow:
+    0 18px 42px rgba(2, 6, 20, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+/* ขอบนีออนไล่สี (ฟ้า -> ม่วง -> ชมพู) แบบบางเฉียบ */
+.neon-edge::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 229, 255, 0.85) 0%,
+    rgba(155, 93, 229, 0.55) 45%,
+    rgba(255, 46, 196, 0.7) 100%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ชิปกระจกเล็กๆ สำหรับป้ายกำกับ */
+.glass-chip {
+  display: inline-block;
+  padding: 0.45rem 1.1rem;
+  border-radius: 999px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  box-shadow:
+    0 0 16px rgba(0, 229, 255, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: var(--cyan-soft);
+  letter-spacing: 1px;
+}
+
+
+/* -------------------------------------------
+   2. Neon Buttons & Chips
+   ------------------------------------------- */
+.neon-btn {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.9rem 1.8rem;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--star-white);
+  background: linear-gradient(
+    135deg,
+    rgba(22, 48, 94, 0.75) 0%,
+    rgba(60, 20, 90, 0.75) 100%
+  );
+  border: 1px solid rgba(0, 229, 255, 0.45);
+  border-radius: 18px;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    0 0 22px rgba(0, 229, 255, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  transition: all 0.3s ease;
+}
+
+.neon-btn:hover {
+  transform: translateY(-3px);
+  border-color: var(--cyan);
+  box-shadow:
+    0 0 34px rgba(0, 229, 255, 0.45),
+    0 10px 26px rgba(2, 6, 20, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.neon-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+/* ปุ่มสตาร์ทหลัก: ใหญ่และเด่นเป็นพิเศษ */
+.start-btn {
+  padding: 1.15rem 2.4rem;
+  font-size: clamp(1rem, 4vw, 1.15rem);
+  border-radius: 999px;
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+}
+
+
+/* -------------------------------------------
+   3. Glass Frame Cards
+   ------------------------------------------- */
+
+/* กรอบกระจกของการ์ดรูป (อยู่ใน .tilt-layer เพื่อเอียงตามเมาส์) */
+.glass-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  border-radius: 18px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 16px 38px rgba(2, 6, 20, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  backface-visibility: hidden;
+  overflow: hidden;
+  transition: border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+/* การ์ดหน้าสุด (active): ขอบฟ้าเรืองแสงจ้า */
+.carousel-card.is-active .glass-frame {
+  border-color: rgba(0, 229, 255, 0.55);
+  box-shadow:
+    0 0 26px var(--glow-cyan),
+    0 18px 44px rgba(2, 6, 20, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.card-photo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(7, 16, 38, 0.5);
+}
+
+.card-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  object-fit: cover;
+  user-select: none;
+}
+
+.card-caption {
+  padding: 9px 4px 3px;
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--text-light);
+  letter-spacing: 0.4px;
+}
+
+.card-num {
+  position: absolute;
+  top: 16px;
+  left: 18px;
+  z-index: 2;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.78rem;
+  letter-spacing: 2px;
+  color: var(--cyan-soft);
+  text-shadow: 0 0 8px var(--glow-cyan);
+}
+
+/* -------------------------------------------
+   4. 3D Tilt & Glare
+   (ชั้นเอียงการ์ด + คราบแสงวาบบนผิวกระจก)
+   ------------------------------------------- */
+
+/* เพิ่ม transform เข้าไปใน transition ของกรอบกระจก */
+.carousel-card .glass-frame {
+  transition:
+    border-color 0.35s ease,
+    box-shadow 0.35s ease,
+    opacity 0.45s ease,
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* การ์ดข้างเคียงจางลงเล็กน้อย / การ์ด active ยกตัวเด่นขึ้น */
+.carousel-card .glass-frame {
+  opacity: 0.55;
+}
+
+.carousel-card.is-active .glass-frame {
+  opacity: 1;
+  transform: scale(1.06);
+}
+
+/* คราบแสงวาบเคลื่อนตามเมาส์ (--gx/--gy ส่งจาก js/gallery-3d.js) */
+.card-glare {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: 18px;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0;
+  background: radial-gradient(
+    circle at var(--gx, 50%) var(--gy, 50%),
+    rgba(255, 255, 255, 0.3) 0%,
+    rgba(125, 249, 255, 0.12) 32%,
+    transparent 62%
+  );
+  transition: opacity 0.35s ease;
+}
+
+.carousel-card:hover .card-glare {
+  opacity: 1;
+}
+
+/* -------------------------------------------
+   5. Hologram Rings & Orbit Particles
+   (วงแหวนฮอโลแกรม + ฝุ่นดาวโคจรรอบการ์ด)
+   ------------------------------------------- */
+
+/* วงแหวนไล่สีนีออน หมุนแบนราบรอบการ์ดสไตล์ดาวเสาร์ */
+.holo-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  padding: 1px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 229, 255, 0.85) 30%,
+    rgba(255, 46, 196, 0.65) 62%,
+    transparent 100%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+.ring-a {
+  width: 128%;
+  height: 128%;
+  opacity: 0.5;
+  animation: holoSpinA 12s linear infinite;
+}
+
+.ring-b {
+  width: 104%;
+  height: 104%;
+  opacity: 0.38;
+  animation: holoSpinB 17s linear infinite;
+}
+
+@keyframes holoSpinA {
+  from { transform: translate(-50%, -50%) rotateX(76deg) rotateZ(0deg); }
+  to   { transform: translate(-50%, -50%) rotateX(76deg) rotateZ(360deg); }
+}
+
+@keyframes holoSpinB {
+  from { transform: translate(-50%, -50%) rotateX(76deg) rotateZ(58deg); }
+  to   { transform: translate(-50%, -50%) rotateX(76deg) rotateZ(-302deg); }
+}
+
+/* ฐานแสงฮอโลแกรมใต้การ์ด (เหมือนภาพถูกฉายลอยขึ้น) */
+.holo-base {
+  position: absolute;
+  bottom: -8%;
+  left: 50%;
+  width: 64%;
+  height: 14px;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(6px);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 229, 255, 0.55) 0%,
+    rgba(155, 93, 229, 0.28) 45%,
+    transparent 72%
+  );
+  transform: translateX(-50%) rotateX(78deg);
+  animation: holoBasePulse 3.4s ease-in-out infinite;
+}
+
+@keyframes holoBasePulse {
+  0%, 100% {
+    opacity: 0.45;
+    transform: translateX(-50%) rotateX(78deg) scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translateX(-50%) rotateX(78deg) scale(1.12);
+  }
+}
+
+/* เส้นทางโคจร: วงแหวนประ (Hologram Ring) รอบการ์ด
+   ขนาด/ความเร็ว/ตำแหน่งส่งมาจาก js/gallery-3d.js */
+.orbit-path {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--orbit-r, 140px) * 2);
+  height: calc(var(--orbit-r, 140px) * 2);
+  margin: calc(var(--orbit-r, 140px) * -1) 0 0 calc(var(--orbit-r, 140px) * -1);
+  border: 1px dashed rgba(125, 249, 255, 0.16);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: orbitSpin var(--orbit-speed, 11s) linear infinite;
+}
+
+@keyframes orbitSpin {
+  from {
+    transform: translateY(var(--orbit-y, 0px)) rotateX(72deg) rotateZ(0deg);
+  }
+  to {
+    transform: translateY(var(--orbit-y, 0px)) rotateX(72deg) rotateZ(360deg);
+  }
+}
+
+/* ฝุ่นดาวเรืองแสงที่วิ่งตามเส้นทางโคจร */
+.orbit-dot {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: var(--dot-size, 6px);
+  height: var(--dot-size, 6px);
+  margin: calc(var(--dot-size, 6px) / -2) 0 0 calc(var(--dot-size, 6px) / -2);
+  border-radius: 50%;
+  background: var(--dot-color, #7df9ff);
+  box-shadow: 0 0 10px 2px var(--dot-color, #7df9ff);
+}
+
+/* -------------------------------------------
+   6. Reduced Motion
+   (เคารพการตั้งค่าลดแอนิเมชันของระบบผู้ใช้)
+   ------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

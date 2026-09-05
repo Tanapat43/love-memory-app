@@ -1,25 +1,43 @@
 <!DOCTYPE html>
 <html lang="th">
   <head>
-    <!-- ===== Meta & Styles ===== -->
+    <!-- ===== Meta ===== -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Space Love Story - เรื่องราวความรักในอวกาศลึกลับ" />
+    <meta
+      name="description"
+      content="Space Love Story - ความทรงจำความรักลอยเด่นกลางอวกาศในแกลเลอรี 3D สไตล์ Sci-Fi Glassmorphism"
+    />
     <title>Space Love Story | ความรักของเราในอวกาศ</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>" />
-    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>"
+    />
+
+    <!-- ===== Fonts: Orbitron (Sci-Fi) + Kanit (ไทย) ===== -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&family=Orbitron:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- ===== Styles: Layout หลัก + ดีไซน์กระจก/นีออน ===== -->
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/glassmorphism.css" />
   </head>
 
   <body>
-    <!-- ===== Background: ดาวระยิบระยับ + เนบิวลา (สร้างดาวแบบ dynamic ใน app.js) ===== -->
+    <!-- ===== Background: ดาว / เนบิวลา / ออโรรา (ดาวสร้างแบบ dynamic ใน js/main.js) ===== -->
     <div class="stars-bg" id="starsBg" aria-hidden="true"></div>
     <div class="nebula" aria-hidden="true"></div>
+    <div class="aurora" aria-hidden="true"></div>
 
     <!-- ===== Section 1: Hero — หน้าแรก + อัปโหลดรูป ===== -->
     <section class="hero" id="hero">
       <div class="hero-content">
-        <!-- หัวข้อ -->
         <div class="hero-text">
+          <span class="glass-chip hero-badge">✦ INTERACTIVE 3D EXPERIENCE ✦</span>
           <h1 class="hero-title">
             <span class="title-glow">🚀 Space Love Story 💫</span>
           </h1>
@@ -28,7 +46,7 @@
 
         <div class="upload-section" id="uploadSection">
           <!-- ปุ่มเลือกรูปภาพ -->
-          <div class="upload-container">
+          <div class="upload-container glass-panel neon-edge">
             <label for="photoInput" class="upload-btn" id="uploadBtn">
               <span class="upload-icon">📸</span>
               <span class="upload-text">เลือกรูปภาพคู่ของเรา</span>
@@ -38,18 +56,20 @@
           </div>
 
           <!-- ตัวอย่างรูป + จำนวนรูปที่จะโชว์ + ปุ่มสตาร์ท -->
-          <div class="preview-section" id="previewSection" hidden>
+          <div class="preview-section glass-panel neon-edge" id="previewSection" hidden>
             <h3 class="preview-title">
               📷 รูปภาพที่เลือก (<span id="photoCount">0</span> รูป)
             </h3>
             <div class="thumbnails-container" id="thumbnailsContainer"></div>
 
             <div class="photo-count-section">
-              <label for="displayCount" class="count-label">จำนวนรูปภาพที่ต้องการโชว์:</label>
+              <label for="displayCount" class="count-label">
+                จำนวนรูปภาพที่ต้องการโชว์:
+              </label>
               <input type="number" id="displayCount" class="count-input" min="1" value="5" />
             </div>
 
-            <button class="start-btn" id="startBtn">
+            <button class="start-btn neon-btn" id="startBtn">
               <span class="btn-text">✨ สตาร์ทการเดินทางอวกาศของเรา</span>
               <span class="btn-icon">🚀🌌</span>
             </button>
@@ -58,33 +78,61 @@
       </div>
     </section>
 
-    <!-- ===== Overlay: Rocket Warp Transition ===== -->
+    <!-- ===== Overlay: Rocket Warp Transition (จรวด + Hyperspace Streaks) ===== -->
     <div class="warp-overlay" id="warpOverlay" aria-hidden="true">
+      <div class="warp-streaks" aria-hidden="true"></div>
+
       <!-- เฟส 1: จรวดพุ่งเข้ามาจากขอบขวาของจอ -->
       <div class="warp-rocket-fly">🚀</div>
 
-      <!-- เฟส 2: จรวดบินวนเป็นเกลียว/วงกลมกลางจอ -->
+      <!-- เฟส 2: จรวดบินวนเป็นเกลียวกลางจอ -->
       <div class="warp-rocket-orbit">
-        <div class="warp-rocket">🚀</div>
+        <div class="warp-rocket">
+          <div class="warp-rocket-core">🚀</div>
+        </div>
       </div>
 
-      <!-- เฟส 3: รูปโพลารอยด์พุ่งออกจากจรวดทีละรูป (สร้างแบบ dynamic ใน app.js) -->
+      <!-- เฟส 3: รูปกระจกจิ๋วพุ่งออกจากจรวด (สร้างแบบ dynamic ใน js/warp-animation.js) -->
       <div class="warp-photos" id="warpPhotos"></div>
 
       <div class="warp-text">🚀 กำลังรวบรวมความทรงจำจากจักรวาล...</div>
     </div>
 
-    <!-- แสงวาร์ปวาบ (Warp Flash) — ปิดท้ายก่อนเข้าสู่ Timeline -->
+    <!-- แสง Cyber Flash วาบ — ปิดท้ายก่อนเข้าสู่ 3D Gallery -->
     <div class="warp-flash" id="warpFlash" aria-hidden="true"></div>
 
-    <!-- ===== Section 2: Timeline — โชว์รูปภาพความทรงจำ ===== -->
-    <section class="timeline-section" id="timelineSection" hidden>
-      <div class="timeline" id="timeline">
-        <!-- Timeline items จะถูกสร้างแบบ dynamic ด้วย JavaScript -->
+    <!-- ===== Section 2: 3D Hologram Gallery — คารูเซลล์กระจกลอยกลางอวกาศ ===== -->
+    <section class="gallery-section" id="gallerySection" hidden>
+      <header class="gallery-header">
+        <span class="glass-chip">✦ HOLOGRAM MEMORY DECK ✦</span>
+        <h2 class="gallery-title">แกลเลอรีความทรงจำของเรา</h2>
+        <p class="gallery-subtitle">หมุนสำรวจดาวทุกดวงในจักรวาลของเรา</p>
+      </header>
+
+      <div class="carousel-stage" id="carouselStage">
+        <div class="carousel-viewport" id="carouselViewport">
+          <!-- การ์ดกระจกถูกสร้างแบบ dynamic ใน js/gallery-3d.js -->
+        </div>
       </div>
+
+      <div class="carousel-controls">
+        <button class="carousel-btn" id="prevBtn" type="button" aria-label="รูปก่อนหน้า">
+          ❮
+        </button>
+        <div class="carousel-dots" id="carouselDots"></div>
+        <button class="carousel-btn" id="nextBtn" type="button" aria-label="รูปถัดไป">
+          ❯
+        </button>
+      </div>
+
+      <p class="gallery-hint">
+        🖱️ ลากเมาส์หรือปัดหน้าจอเพื่อหมุนวง • วางเมาส์บนการ์ดเพื่อชมเอฟเฟกต์ Tilt 3D
+      </p>
     </section>
 
-    <!-- ===== App ===== -->
-    <script src="app.js"></script>
+    <!-- ===== Modules: โหลดโมดูลก่อน แล้วปิดท้ายด้วยจุดเริ่มต้น (main) ===== -->
+    <script src="js/warp-animation.js"></script>
+    <script src="js/gallery-3d.js"></script>
+    <script src="js/main.js"></script>
   </body>
 </html>
