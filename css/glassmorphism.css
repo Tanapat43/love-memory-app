@@ -178,6 +178,31 @@
   font-size: 0.95rem;
   color: var(--text-light);
   letter-spacing: 0.4px;
+  min-height: 1.6em;
+}
+
+/* พิกัดอวกาศใต้รูป — พิมพ์ทีละตัวอักษรเมื่อการ์ดถูกเลือก */
+.card-stardate {
+  padding: 8px 4px 2px;
+  text-align: center;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  min-height: 1.1em;
+}
+
+/* เคอร์เซอร์กะพริบระหว่างเอฟเฟกต์พิมพ์ข้อความ */
+.is-typing::after {
+  content: '▍';
+  margin-left: 1px;
+  color: var(--cyan);
+  text-shadow: 0 0 8px var(--glow-cyan);
+  animation: caretBlink 0.75s steps(1) infinite;
+}
+
+@keyframes caretBlink {
+  50% { opacity: 0; }
 }
 
 .card-num {
@@ -197,12 +222,13 @@
    (ชั้นเอียงการ์ด + คราบแสงวาบบนผิวกระจก)
    ------------------------------------------- */
 
-/* เพิ่ม transform เข้าไปใน transition ของกรอบกระจก */
+/* เพิ่ม transform/filter เข้าไปใน transition ของกรอบกระจก */
 .carousel-card .glass-frame {
   transition:
     border-color 0.35s ease,
     box-shadow 0.35s ease,
     opacity 0.45s ease,
+    filter 0.45s ease,
     transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -368,4 +394,57 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+
+/* -------------------------------------------
+   7. Reactive Glow & Focus Depth
+   (แสงเรืองตามทิศทางเมาส์ + โฟกัสการ์ดพุ่งหน้า)
+   ------------------------------------------- */
+
+/* แสงฮอโลแกรมบนผิวกระจก ปฏิกิริยากับทิศทางเมาส์
+   (--mx/--my = ทิศทาง -1..1, --prox = ความใกล้ 0..1 จาก JS) */
+.glass-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: 18px;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: var(--prox, 0);
+  background: radial-gradient(
+    150px circle at
+      calc(50% + var(--mx, 0) * 52%)
+      calc(50% + var(--my, 0) * 52%),
+    rgba(0, 229, 255, 0.32) 0%,
+    rgba(155, 93, 229, 0.14) 42%,
+    transparent 70%
+  );
+  transition: opacity 0.25s ease;
+}
+
+/* ขอบเรืองแสงขยายตัวตามความใกล้ของเมาส์ */
+.carousel-card .glass-frame {
+  box-shadow:
+    0 16px 38px rgba(2, 6, 20, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 0 calc(var(--prox, 0) * 30px)
+      rgba(0, 229, 255, calc(var(--prox, 0) * 0.35));
+}
+
+/* โหมดโฟกัส: การ์ดที่ถูกคลิกพุ่งเข้าหาผู้ชม (Bring to Front) */
+.carousel-card.is-focused .glass-frame {
+  transform: translateZ(130px) scale(1.14);
+  border-color: rgba(125, 249, 255, 0.7);
+  box-shadow:
+    0 0 42px var(--glow-cyan),
+    0 24px 52px rgba(2, 6, 20, 0.68),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+/* การ์ดที่เหลือถอยหลังพร้อมเบลอเบาๆ */
+.gallery-section.has-focus .carousel-card:not(.is-focused) .glass-frame {
+  filter: blur(4px) brightness(0.55) saturate(0.85);
+  opacity: 0.45;
 }

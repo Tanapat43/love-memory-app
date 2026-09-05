@@ -7,11 +7,12 @@
 
    สารบัญ
    1. Config & Captions
-   2. Card Factory (กระจก + วงแหวน + ฝุ่นดาวโคจร)
+   2. Card Factory (กระจก + วงแหวน + STARDATE)
    3. Carousel Engine (มุม / รัศมี / เรนเดอร์ / สแนป)
-   4. 3D Tilt Effect
-   5. Controls (ปุ่ม / จุด / คีย์บอร์ด / ลาก / Auto-rotate)
-   6. Public API (build / goTo / next / prev)
+   4. Typing Effect (พิมพ์ทีละตัวอักษร)
+   5. 3D Tilt & Reactive Glow
+   6. Controls (ปุ่ม / จุด / คีย์บอร์ด / ลาก / Focus)
+   7. Public API (build / show / goTo / next / prev)
    ========================================================= */
 
 'use strict';
@@ -33,6 +34,9 @@ window.SpaceLove = window.SpaceLove || {};
     AUTO_RESUME_MS: 2600,   // หน่วงก่อนกลับมาหมุนอัตโนมัติ
     ENTER_STAGGER: 90,      // ระยะห่างของการ์ดตอนเปิดฉาก (ms)
     ORBIT_DOT_COUNT: 3,     // จำนวนฝุ่นดาวโคจรต่อการ์ด
+    TYPE_SPEED_MS: 26,      // ความเร็วพิมพ์ข้อความ (มิลลิวินาที/ตัวอักษร)
+    PROX_RADIUS: 280,       // รัศมีแสงปฏิกิริยาเมื่อเมาส์เข้าใกล้ (px)
+    STARDATE_STEP_DAYS: 47, // ระยะห่าง STARDATE ระหว่างการ์ด (วัน)
   };
 
   // คำโปรยสั้นๆ ใต้รูป (วนซ้ำตามจำนวนรูป)
@@ -69,6 +73,7 @@ window.SpaceLove = window.SpaceLove || {};
     rotation: 0,
     ready: false,
     dragging: false,
+    focused: -1, // การ์ดที่ถูกดึงขึ้นหน้า (โหมดโฟกัส)
     autoTimer: null,
     resumeTimer: null,
   };
@@ -105,11 +110,26 @@ window.SpaceLove = window.SpaceLove || {};
     }
   }
 
-  // สร้างการ์ดกระจก 1 ใบ: วงแหวนฮอโลแกรม + ชั้น Tilt + กรอบรูป + แสงวาบ
+  // สร้างพิกัด STARDATE ประจำการ์ด (ย้อนเวลากลับไปทีละช่วง)
+  function makeStardate(index) {
+    const DAY_MS = 86400000;
+    const offsetDays = index * CONFIG.STARDATE_STEP_DAYS + 13;
+    const date = new Date(Date.now() - offsetDays * DAY_MS);
+    return (
+      'STARDATE ' + date.getFullYear() + '.' +
+      pad2(date.getMonth() + 1) + '.' + pad2(date.getDate())
+    );
+  }
+
+  // สร้างการ์ดกระจก 1 ใบ: วงแหวน + ชั้น Tilt + รูป + STARDATE + แสงวาบ
   function createCard(photo, index) {
+    const caption = CAPTIONS[index % CAPTIONS.length];
+    const stardate = makeStardate(index);
     const card = document.createElement('div');
     card.className = 'carousel-card';
     card.dataset.index = String(index);
+    card.dataset.caption = caption;
+    card.dataset.stardate = stardate;
     card.innerHTML = [
       '<div class="holo-ring ring-a" aria-hidden="true"></div>',
       '<div class="holo-ring ring-b" aria-hidden="true"></div>',
@@ -119,10 +139,9 @@ window.SpaceLove = window.SpaceLove || {};
       '    <span class="card-num">' + pad2(index + 1) + '</span>',
       '    <figure class="card-photo">',
       '      <img src="' + photo + '" alt="ความทรงจำที่ ' + (index + 1) + '" draggable="false" />',
-      '      <figcaption class="card-caption">',
-      '        ' + CAPTIONS[index % CAPTIONS.length],
-      '      </figcaption>',
+      '      <figcaption class="card-caption">' + caption + '</figcaption>',
       '    </figure>',
+      '    <span class="card-stardate">' + stardate + '</span>',
       '  </div>',
       '  <div class="card-glare" aria-hidden="true"></div>',
       '</div>',
@@ -177,6 +196,54 @@ window.SpaceLove = window.SpaceLove || {};
     return ((index % n) + n) % n;
   }
 
+  /* -----------------------------------------
+     4. Typing Effect (พิมพ์ทีละตัวอักษร)
+     ----------------------------------------- */
+
+  // พิมพ์ข้อความลง element ทีละตัว พร้อมเคอร์เซอร์กะพริบ
+  function typeInto(card, el, text, speed, token, done) {
+    el.textContent = '';
+    el.classList.add('is-typing');
+    let shown = 0;
+
+    function tick() {
+      if (card._typeToken !== token) return; // ถูกลำดับใหม่แทนที่
+      shown += 1;
+      el.textContent = text.slice(0, shown);
+      if (shown < text.length) {
+        el._typeTimer = window.setTimeout(tick, speed);
+      } else {
+        el.classList.remove('is-typing');
+        if (done) done();
+      }
+    }
+
+    tick();
+  }
+
+  // พิมพ์ STARDATE ก่อน แล้วต่อด้วยคำโปรยของการ์ดที่ถูกเลือก
+  function playTypeSequence(card) {
+    const stardateEl = card.querySelector('.card-stardate');
+    const captionEl = card.querySelector('.card-caption');
+    if (!stardateEl || !captionEl) return;
+
+    card._typeToken = (card._typeToken || 0) + 1;
+    const token = card._typeToken;
+    window.clearTimeout(stardateEl._typeTimer);
+    window.clearTimeout(captionEl._typeTimer);
+
+    typeInto(card, stardateEl, card.dataset.stardate, 14, token, () => {
+      typeInto(
+        card,
+        captionEl,
+        card.dataset.caption,
+        CONFIG.TYPE_SPEED_MS,
+        token,
+        null
+      );
+    });
+  }
+
   // อัปเดตสถานะการ์ด active + จุดนำทางให้ตรงกัน
   function setActive(index) {
     carousel.active = normalizeIndex(index);
@@ -186,15 +253,42 @@ window.SpaceLove = window.SpaceLove || {};
     Array.from(els.dots.children).forEach((dot, i) => {
       dot.classList.toggle('is-active', i === carousel.active);
     });
+    playTypeSequence(carousel.cards[carousel.active]);
   }
 
   // หมุนวงไปยังการ์ดลำดับ index โดยเลือกเส้นทางที่สั้นที่สุด
   function goTo(index) {
     if (!carousel.ready || carousel.dragging) return;
+    clearFocus();
     const target = -carousel.step * normalizeIndex(index);
     carousel.rotation += shortestDelta(carousel.rotation, target);
     applyRotation();
     setActive(index);
+  }
+
+  // ดึงการ์ดพุ่งเข้าหน้าพร้อมเบลอการ์ดอื่น (Bring to Front)
+  function setFocus(index) {
+    const target = normalizeIndex(index);
+    if (target === carousel.focused) {
+      clearFocus(); // คลิกซ้ำที่การ์ดเดิม = ยกเลิกโฟกัส
+      return;
+    }
+    carousel.focused = target;
+    els.section.classList.add('has-focus');
+    carousel.cards.forEach((card, i) => {
+      card.classList.toggle('is-focused', i === target);
+    });
+    playTypeSequence(carousel.cards[target]);
+    if (App.Sound) App.Sound.play('focus');
+  }
+
+  function clearFocus() {
+    if (carousel.focused === -1) return;
+    carousel.focused = -1;
+    els.section.classList.remove('has-focus');
+    carousel.cards.forEach((card) => {
+      card.classList.remove('is-focused');
+    });
   }
 
   function next() {
@@ -206,7 +300,7 @@ window.SpaceLove = window.SpaceLove || {};
   }
 
   /* -----------------------------------------
-     4. 3D Tilt Effect (เอียงตามเมาส์นุ่มนวลด้วย rAF)
+     5. 3D Tilt & Reactive Glow (เอียงตามเมาส์ + แสงปฏิกิริยา)
      ----------------------------------------- */
 
   function attachTilt(card) {
@@ -241,18 +335,23 @@ window.SpaceLove = window.SpaceLove || {};
         glare.style.setProperty('--gx', (px * 100).toFixed(1) + '%');
         glare.style.setProperty('--gy', (py * 100).toFixed(1) + '%');
       }
+      // ทิศทางเมาส์ (-1..1) + ความใกล้ สำหรับแสงเรืองปฏิกิริยา
+      card.style.setProperty('--mx', (px * 2 - 1).toFixed(2));
+      card.style.setProperty('--my', (py * 2 - 1).toFixed(2));
+      card.style.setProperty('--prox', '1');
       kick();
     });
 
     card.addEventListener('pointerleave', () => {
       state.targetX = 0;
       state.targetY = 0;
+      card.style.setProperty('--prox', '0');
       kick();
     });
   }
 
   /* -----------------------------------------
-     5. Controls (ปุ่ม / จุด / คีย์บอร์ด / ลาก / Auto-rotate)
+     6. Controls (ปุ่ม / จุด / คีย์บอร์ด / ลาก / Focus)
      ----------------------------------------- */
 
   let resizeTimer = null;
@@ -304,6 +403,7 @@ window.SpaceLove = window.SpaceLove || {};
     carousel.dragStartRotation = carousel.rotation;
     carousel.dragLastDx = 0;
     els.viewport.classList.add('is-dragging');
+    clearFocus();
     stopAutoRotate();
     window.clearTimeout(carousel.resumeTimer);
   }
@@ -321,16 +421,23 @@ window.SpaceLove = window.SpaceLove || {};
     carousel.dragging = false;
     els.viewport.classList.remove('is-dragging');
 
-    // แตะ/คลิกเบาๆ โดยไม่ลาก -> หมุนไปหาการ์ดที่คลิกทันที
+    // แตะ/คลิกเบาๆ โดยไม่ลาก -> ดึงการ์ดที่คลิกพุ่งขึ้นหน้า
     if (Math.abs(carousel.dragLastDx) < 6) {
       const hit = e.target && e.target.closest
         ? e.target.closest('.carousel-card')
         : null;
       if (hit) {
-        goTo(Number(hit.dataset.index));
+        const index = Number(hit.dataset.index);
+        if (index === carousel.active) {
+          setFocus(index); // คลิกการ์ดหน้าซ้ำ = สลับโฟกัส
+        } else {
+          goTo(index);
+          setFocus(index);
+        }
         restartAutoRotate();
         return;
       }
+      clearFocus(); // คลิกพื้นที่ว่าง = ยกเลิกโฟกัส
     }
 
     // ปล่อยมือ -> สแนปเข้าการ์ดที่ใกล้ทิศทางการหมุนปัจจุบัน
@@ -359,6 +466,30 @@ window.SpaceLove = window.SpaceLove || {};
     }, 160);
   }
 
+  // แสงเรืองปฏิกิริยาเมื่อเมาส์โฉบเข้าใกล้การ์ด active
+  function onStagePointerMove(e) {
+    if (carousel.dragging) return;
+    if (e.target.closest && e.target.closest('.carousel-card')) return;
+    const card = carousel.cards[carousel.active];
+    if (!card) return;
+
+    const rect = card.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
+    const prox = Math.max(0, 1 - dist / CONFIG.PROX_RADIUS);
+
+    card.style.setProperty('--prox', prox.toFixed(2));
+    card.style.setProperty(
+      '--mx',
+      ((e.clientX - cx) / (rect.width / 2)).toFixed(2)
+    );
+    card.style.setProperty(
+      '--my',
+      ((e.clientY - cy) / (rect.height / 2)).toFixed(2)
+    );
+  }
+
   // ผูก event ของรอบนี้ทั้งหมด (abort อัตโนมัติตอน build รอบใหม่)
   function wireControls(signal) {
     els.prevBtn.addEventListener('click', () => {
@@ -370,6 +501,7 @@ window.SpaceLove = window.SpaceLove || {};
       restartAutoRotate();
     }, { signal });
     els.viewport.addEventListener('pointerdown', onDragStart, { signal });
+    els.stage.addEventListener('pointermove', onStagePointerMove, { signal });
     window.addEventListener('pointermove', onDragMove, { signal });
     window.addEventListener('pointerup', onDragEnd, { signal });
     window.addEventListener('pointercancel', onDragEnd, { signal });
@@ -378,7 +510,7 @@ window.SpaceLove = window.SpaceLove || {};
   }
 
   /* -----------------------------------------
-     6. Public API (build / show / goTo / next / prev)
+     7. Public API (build / show / goTo / next / prev)
      ----------------------------------------- */
 
   // ค้นหา element ของแกลเลอรี (เรียกซ้ำได้ทุกครั้งที่ build)
@@ -401,12 +533,14 @@ window.SpaceLove = window.SpaceLove || {};
     stopAutoRotate();
     window.clearTimeout(carousel.resumeTimer);
     els.section.classList.remove('is-visible');
+    els.section.classList.remove('has-focus');
     els.viewport.innerHTML = '';
 
     carousel.cards = [];
     carousel.count = photos.length;
     carousel.active = 0;
     carousel.rotation = 0;
+    carousel.focused = -1;
     carousel.ready = false;
 
     photos.forEach((photo, index) => {
@@ -436,6 +570,10 @@ window.SpaceLove = window.SpaceLove || {};
       els.section.classList.add('is-visible');
       carousel.ready = true;
       startAutoRotate();
+      // พิมพ์ STARDATE/คำโปรยของการ์ดแรกซ้ำหลังการ์ดบินเข้าครบ
+      window.setTimeout(() => {
+        playTypeSequence(carousel.cards[carousel.active]);
+      }, 700);
     });
   }
 

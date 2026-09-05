@@ -207,6 +207,8 @@ window.SpaceLove = window.SpaceLove || {};
     const shownPhotos = state.photos.slice(0, resolveDisplayCount());
     els.hero.hidden = true; // ซ่อนหน้าแรกทันทีที่กดสตาร์ท
 
+    if (App.Sound) App.Sound.play('warp'); // เสียงวาร์ปความถี่ต่ำ
+
     App.Gallery.build(shownPhotos); // เตรียมการ์ดระหว่างรอวาร์ป
     await App.Warp.play(shownPhotos); // จรวดวาร์ป + Cyber Flash
     App.Gallery.show(); // ตอนแสงวาบสว่างสุด -> เผยแกลเลอรี 3D
@@ -231,6 +233,9 @@ window.SpaceLove = window.SpaceLove || {};
   }
 
   function init() {
+    if (App.Sound) App.Sound.init();
+    if (App.Music) App.Music.init();
+    if (App.CursorFX) App.CursorFX.init();
     createStars(els.starsBg, 150);
     createStars(els.warpOverlay, 90); // ดาวฉากหลังบน overlay วาร์ป
     createStardust();

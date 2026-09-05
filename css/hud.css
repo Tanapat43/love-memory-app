@@ -1,0 +1,264 @@
+/* =========================================================
+   Space Love Story — HUD & Cursor FX Styles
+   ---------------------------------------------------------
+   เป้าโฟกัสโฮโลแกรม / หางฝุ่นดาวตามเมาส์ /
+   ปุ่มมิวต์จิ๋ว / มินิเพลเยอร์ Space Ambient
+
+   สารบัญ
+   1. Cursor Reticle (เป้าโฟกัสโฮโลแกรม)
+   2. Stardust Trail (หางฝุ่นดาว)
+   3. Audio Toggle (ปุ่มมิวต์จิ๋ว)
+   4. Mini Music Player
+   5. Responsive
+   ========================================================= */
+
+
+/* -------------------------------------------
+   1. Cursor Reticle
+   ------------------------------------------- */
+.cursor-reticle {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border: 1px solid rgba(125, 249, 255, 0.55);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow:
+    0 0 14px rgba(125, 249, 255, 0.35),
+    inset 0 0 8px rgba(125, 249, 255, 0.22);
+  transition: opacity 0.3s ease;
+  will-change: transform;
+}
+
+.cursor-reticle::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: var(--cyan-soft);
+  box-shadow: 0 0 8px var(--glow-cyan);
+}
+
+.cursor-reticle::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border: 1px dashed rgba(125, 249, 255, 0.3);
+  border-radius: 50%;
+  animation: reticleSpin 7s linear infinite;
+}
+
+@keyframes reticleSpin {
+  to { transform: rotate(360deg); }
+}
+
+.cursor-reticle.is-hidden {
+  opacity: 0;
+}
+
+
+/* -------------------------------------------
+   2. Stardust Trail
+   ------------------------------------------- */
+.cursor-dust {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 9998;
+}
+
+.dust-mote {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: var(--o, 0.7);
+  animation: moteFloat var(--life, 1s) ease-out forwards;
+}
+
+@keyframes moteFloat {
+  from {
+    opacity: var(--o, 0.7);
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(var(--dx, 0px), var(--dy, -40px)) scale(0.15);
+  }
+}
+
+
+/* -------------------------------------------
+   3. Audio Toggle
+   ------------------------------------------- */
+.audio-toggle {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 1000;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  color: var(--cyan-soft);
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(0, 229, 255, 0.45);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow:
+    0 0 18px rgba(0, 229, 255, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  transition: all 0.3s ease;
+}
+
+.audio-toggle:hover {
+  transform: translateY(-2px) scale(1.08);
+  border-color: var(--cyan);
+  box-shadow:
+    0 0 26px var(--glow-cyan),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.audio-toggle.is-muted {
+  color: var(--text-dim);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+
+/* -------------------------------------------
+   4. Mini Music Player
+   ------------------------------------------- */
+.music-player {
+  position: fixed;
+  bottom: 18px;
+  right: 18px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px 9px 9px;
+  border-radius: 999px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  box-shadow:
+    0 0 22px rgba(0, 229, 255, 0.16),
+    0 14px 34px rgba(2, 6, 20, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.mp-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  color: var(--cyan-soft);
+  background: rgba(7, 16, 38, 0.55);
+  border: 1px solid rgba(0, 229, 255, 0.5);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.25);
+  transition: all 0.3s ease;
+}
+
+.mp-btn:hover {
+  color: #ffffff;
+  border-color: var(--cyan);
+  transform: scale(1.08);
+  box-shadow: 0 0 22px var(--glow-cyan);
+}
+
+.mp-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.mp-title {
+  font-family: 'Orbitron', 'Kanit', sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 2.5px;
+  color: var(--cyan-soft);
+  text-shadow: 0 0 8px var(--glow-cyan);
+}
+
+.mp-eq {
+  display: flex;
+  align-items: flex-end;
+  gap: 2.5px;
+  height: 12px;
+}
+
+.mp-eq span {
+  width: 3px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--cyan);
+  opacity: 0.45;
+  transition: height 0.3s ease;
+}
+
+.music-player.is-playing .mp-eq span {
+  animation: eqBounce 0.9s ease-in-out infinite;
+}
+
+.music-player.is-playing .mp-eq span:nth-child(2) { animation-delay: 0.14s; }
+.music-player.is-playing .mp-eq span:nth-child(3) { animation-delay: 0.28s; }
+.music-player.is-playing .mp-eq span:nth-child(4) { animation-delay: 0.42s; }
+
+@keyframes eqBounce {
+  0%, 100% { height: 4px; opacity: 0.45; }
+  50%      { height: 12px; opacity: 1; }
+}
+
+.music-player.is-playing {
+  border-color: rgba(0, 229, 255, 0.6);
+  box-shadow:
+    0 0 30px rgba(0, 229, 255, 0.28),
+    0 14px 34px rgba(2, 6, 20, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+
+/* -------------------------------------------
+   5. Responsive
+   ------------------------------------------- */
+@media (max-width: 480px) {
+  .audio-toggle {
+    top: 12px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .music-player {
+    bottom: 12px;
+    right: 12px;
+    padding: 7px 12px 7px 7px;
+  }
+
+  .mp-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .mp-title {
+    font-size: 0.52rem;
+  }
+}

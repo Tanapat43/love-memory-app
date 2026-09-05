@@ -22,9 +22,10 @@
       rel="stylesheet"
     />
 
-    <!-- ===== Styles: Layout หลัก + ดีไซน์กระจก/นีออน ===== -->
+    <!-- ===== Styles: Layout หลัก + กระจก/นีออน + HUD ===== -->
     <link rel="stylesheet" href="css/main.css" />
     <link rel="stylesheet" href="css/glassmorphism.css" />
+    <link rel="stylesheet" href="css/hud.css" />
   </head>
 
   <body>
@@ -130,7 +131,27 @@
       </p>
     </section>
 
+    <!-- ===== HUD: ปุ่มมิวต์จิ๋ว + มินิเพลเยอร์ (js/sound-fx.js / js/music-player.js) ===== -->
+    <button class="audio-toggle" id="soundToggle" type="button" aria-label="เปิด/ปิดเสียงเอฟเฟกต์">
+      🔊
+    </button>
+
+    <div class="music-player" id="musicPlayer" aria-label="เครื่องเล่นเพลง Space Ambient">
+      <button class="mp-btn" id="musicToggle" type="button" aria-label="เล่นเพลง Space Ambient">
+        ▶
+      </button>
+      <div class="mp-info">
+        <span class="mp-title">SPACE AMBIENT</span>
+        <div class="mp-eq" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+
     <!-- ===== Modules: โหลดโมดูลก่อน แล้วปิดท้ายด้วยจุดเริ่มต้น (main) ===== -->
+    <script src="js/sound-fx.js"></script>
+    <script src="js/music-player.js"></script>
+    <script src="js/cursor-fx.js"></script>
     <script src="js/warp-animation.js"></script>
     <script src="js/gallery-3d.js"></script>
     <script src="js/main.js"></script>
