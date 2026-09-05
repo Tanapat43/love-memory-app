@@ -162,8 +162,12 @@ window.SpaceLove = window.SpaceLove || {};
     const cardW =
       firstCard && firstCard.offsetWidth > 0 ? firstCard.offsetWidth : 250;
     const ideal = (count * (cardW + CONFIG.GAP)) / (2 * Math.PI);
+    // จอเล็ก: ย่อรัศมีตามความกว้างจริง ไม่ให้การ์ดล้นขอบหน้าจอ
+    const vw = Math.max(window.innerWidth, 320);
+    const minRadius = Math.min(CONFIG.MIN_RADIUS, vw * 0.5);
+    const maxRadius = Math.min(CONFIG.MAX_RADIUS, vw * 1.15);
     carousel.radius = Math.round(
-      Math.min(CONFIG.MAX_RADIUS, Math.max(CONFIG.MIN_RADIUS, ideal))
+      Math.min(maxRadius, Math.max(minRadius, ideal))
     );
     carousel.step = 360 / count;
   }

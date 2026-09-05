@@ -463,30 +463,96 @@ body.gallery-mode .memory-actions {
   font-size: 0.92rem;
 }
 
-@media (max-width: 480px) {
+/* -------------------------------------------
+   9. Mobile Top Bar (รวมปุ่มทุกตัวเป็นแถวเดียว)
+   ------------------------------------------- */
+@media (max-width: 768px) {
+  /* แถวบนสุด: ปุ่มแชร์+บันทึก (ซ้าย) / เพลง+เสียง (ขวา) */
   .memory-actions {
-    top: 12px;
-    left: 12px;
+    top: 10px;
+    left: 10px;
+    flex-direction: row;
     gap: 8px;
   }
 
+  /* บนมือถือใช้ไอคอนกลมอย่างเดียว ให้พอดีแถวบน */
   .memory-btn {
-    padding: 7px 12px 7px 9px;
-    font-size: 0.74rem;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+    touch-action: manipulation;
+  }
+
+  .memory-btn .mb-label {
+    display: none;
+  }
+
+  .memory-btn .mb-icon {
+    font-size: 1.05rem;
+  }
+
+  .audio-toggle {
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+    font-size: 0.95rem;
+    touch-action: manipulation;
+  }
+
+  .music-player {
+    top: 10px;
+    right: 58px;
+    bottom: auto;
+    padding: 4px 12px 4px 5px;
+    gap: 8px;
+  }
+
+  .mp-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 0.66rem;
+  }
+
+  .mp-title {
+    display: none;
+  }
+
+  .mp-eq {
+    height: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .memory-actions {
+    top: 8px;
+    left: 8px;
+  }
+
+  .audio-toggle {
+    top: 8px;
+    right: 8px;
+  }
+
+  .music-player {
+    top: 8px;
+    right: 54px;
   }
 
   .toast {
-    bottom: 84px; /* เลี่ยงมินิเพลเยอร์บนจอเล็ก */
-    max-width: 86vw;
+    bottom: 90px;
+    max-width: 88vw;
     font-size: 0.84rem;
     text-align: center;
   }
 
   .export-card {
-    width: 340px;
+    width: 320px;
   }
 
   .ex-photo {
-    height: 300px;
+    height: 280px;
   }
 }

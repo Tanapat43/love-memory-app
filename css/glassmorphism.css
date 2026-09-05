@@ -11,6 +11,8 @@
    4. 3D Tilt & Glare (เอียงตามเมาส์ + แสงวาบ)
    5. Hologram Rings & Orbit Particles
    6. Reduced Motion
+   7. Reactive Glow & Focus Depth
+   8. Mobile Scaling
    ========================================================= */
 
 
@@ -447,4 +449,45 @@
 .gallery-section.has-focus .carousel-card:not(.is-focused) .glass-frame {
   filter: blur(4px) brightness(0.55) saturate(0.85);
   opacity: 0.45;
+}
+
+/* -------------------------------------------
+   8. Mobile Scaling
+   (ย่อการ์ด/ฟอนต์ให้พอดีหน้าจอมือถือ)
+   ------------------------------------------- */
+@media (max-width: 768px) {
+  :root {
+    --card-w: clamp(150px, 60vw, 220px);
+    --card-h: clamp(200px, 78vw, 300px);
+  }
+
+  .glass-frame {
+    padding: 8px;
+    border-radius: 16px;
+  }
+
+  .card-photo {
+    border-radius: 10px;
+  }
+
+  .card-num {
+    font-size: 0.64rem;
+    top: 12px;
+    left: 14px;
+  }
+
+  .card-caption {
+    font-size: 0.82rem;
+    padding: 7px 2px 2px;
+  }
+
+  .card-stardate {
+    font-size: 0.52rem;
+    letter-spacing: 1.5px;
+    padding: 6px 2px 2px;
+  }
+
+  .card-glare {
+    border-radius: 16px;
+  }
 }
