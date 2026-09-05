@@ -31,6 +31,7 @@ window.SpaceLove = window.SpaceLove || {};
     '.thumb-remove',
     '.mp-btn',
     '.audio-toggle',
+    '.memory-btn',
   ].join(', ');
 
   let ctx = null;

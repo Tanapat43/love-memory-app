@@ -9,7 +9,10 @@
    2. Stardust Trail (หางฝุ่นดาว)
    3. Audio Toggle (ปุ่มมิวต์จิ๋ว)
    4. Mini Music Player
-   5. Responsive
+   5. Memory Actions (แชร์ลิงก์ / บันทึกการ์ด)
+   6. Toast Notification
+   7. Export Memory Card (ตัวเรนเดอร์นอกจอ)
+   8. Shared Mode & Responsive
    ========================================================= */
 
 
@@ -260,5 +263,230 @@
 
   .mp-title {
     font-size: 0.52rem;
+  }
+}
+
+
+/* -------------------------------------------
+   5. Memory Actions (แชร์ลิงก์ / บันทึกการ์ด)
+   ------------------------------------------- */
+.memory-actions {
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  z-index: 1000;
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* โชว์เฉพาะเมื่อเข้าสู่โหมดแกลเลอรี (ไม่บดบังหน้า Hero) */
+body.gallery-mode .memory-actions {
+  display: flex;
+}
+
+.memory-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px 9px 11px;
+  font-family: 'Kanit', sans-serif;
+  font-size: 0.82rem;
+  color: var(--cyan-soft);
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(0, 229, 255, 0.45);
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow:
+    0 0 18px rgba(0, 229, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  transition: all 0.3s ease;
+}
+
+.memory-btn:hover {
+  color: #ffffff;
+  transform: translateX(3px);
+  border-color: var(--cyan);
+  box-shadow:
+    0 0 26px var(--glow-cyan),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.memory-btn:active {
+  transform: translateX(3px) scale(0.97);
+}
+
+.mb-icon {
+  font-size: 0.95rem;
+  filter: drop-shadow(0 0 6px var(--glow-cyan));
+}
+
+.mb-label {
+  letter-spacing: 0.4px;
+}
+
+/* ปุ่มแชร์เด่นเป็นพิเศษด้วยขอบโทนม่วง-ชมพู */
+.memory-btn.is-primary {
+  border-color: rgba(255, 46, 196, 0.5);
+  box-shadow:
+    0 0 18px rgba(255, 46, 196, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.memory-btn.is-primary:hover {
+  border-color: var(--magenta);
+  box-shadow:
+    0 0 26px var(--glow-magenta),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+
+/* -------------------------------------------
+   6. Toast Notification
+   ------------------------------------------- */
+.toast {
+  position: fixed;
+  bottom: 26px;
+  left: 50%;
+  z-index: 1200;
+  padding: 0.8rem 1.4rem;
+  font-size: 0.92rem;
+  color: var(--star-white);
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(0, 229, 255, 0.5);
+  border-radius: 999px;
+  box-shadow:
+    0 0 26px rgba(0, 229, 255, 0.28),
+    0 14px 30px rgba(2, 6, 20, 0.6);
+  opacity: 0;
+  transform: translate(-50%, 16px);
+  pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+
+/* -------------------------------------------
+   7. Export Memory Card (เรนเดอร์นอกจอก่อนแคป)
+   ------------------------------------------- */
+.export-card {
+  position: fixed;
+  top: 0;
+  left: -9999px;
+  width: 420px;
+  padding: 26px;
+  border-radius: 26px;
+  background:
+    radial-gradient(
+      ellipse at 18% 12%,
+      rgba(0, 229, 255, 0.14) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse at 85% 90%,
+      rgba(255, 46, 196, 0.12) 0%,
+      transparent 55%
+    ),
+    linear-gradient(160deg, #0b1b3a 0%, #030614 100%);
+  border: 2px solid rgba(0, 229, 255, 0.55);
+  box-shadow: 0 0 40px rgba(0, 229, 255, 0.3);
+  font-family: 'Kanit', sans-serif;
+  color: var(--text-light);
+}
+
+.ex-head {
+  margin-bottom: 14px;
+  font-family: 'Orbitron', 'Kanit', sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 3px;
+  text-align: center;
+  color: var(--cyan-soft);
+  text-shadow: 0 0 10px var(--glow-cyan);
+}
+
+.ex-photo {
+  display: block;
+  width: 100%;
+  height: 380px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.ex-stardate {
+  margin-top: 12px;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.66rem;
+  letter-spacing: 2.5px;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+.ex-caption {
+  margin-top: 6px;
+  font-size: 1.05rem;
+  text-align: center;
+  color: #ffffff;
+}
+
+.ex-foot {
+  margin-top: 14px;
+  font-family: 'Orbitron', 'Kanit', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 2.5px;
+  text-align: center;
+  color: rgba(125, 249, 255, 0.65);
+}
+
+
+/* -------------------------------------------
+   8. Shared Mode & Responsive
+   ------------------------------------------- */
+.shared-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  margin-top: 1.4rem;
+}
+
+.shared-actions .own-btn {
+  padding: 0.7rem 1.4rem;
+  font-size: 0.92rem;
+}
+
+@media (max-width: 480px) {
+  .memory-actions {
+    top: 12px;
+    left: 12px;
+    gap: 8px;
+  }
+
+  .memory-btn {
+    padding: 7px 12px 7px 9px;
+    font-size: 0.74rem;
+  }
+
+  .toast {
+    bottom: 84px; /* เลี่ยงมินิเพลเยอร์บนจอเล็ก */
+    max-width: 86vw;
+    font-size: 0.84rem;
+    text-align: center;
+  }
+
+  .export-card {
+    width: 340px;
+  }
+
+  .ex-photo {
+    height: 300px;
   }
 }

@@ -148,10 +148,30 @@
       </div>
     </div>
 
+    <!-- ===== Memory Actions: แชร์ลิงก์ + บันทึกการ์ด (โชว์ในโหมดแกลเลอรี) ===== -->
+    <div class="memory-actions" id="memoryActions" aria-label="แชร์และบันทึกความทรงจำ">
+      <button class="memory-btn is-primary" id="shareBtn" type="button" title="คัดลอกลิงก์ส่งต่อความทรงจำ">
+        <span class="mb-icon">🔗</span>
+        <span class="mb-label">แชร์ความทรงจำนี้</span>
+      </button>
+      <button class="memory-btn" id="downloadBtn" type="button" title="บันทึกการ์ดความทรงจำเป็น PNG">
+        <span class="mb-icon">💾</span>
+        <span class="mb-label">บันทึกการ์ด</span>
+      </button>
+    </div>
+
+    <!-- กล่องแจ้งเตือน Toast -->
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <!-- ===== Libraries: html2canvas (แคปการ์ด) + LZString (บีบอัดลิงก์แชร์) ===== -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+
     <!-- ===== Modules: โหลดโมดูลก่อน แล้วปิดท้ายด้วยจุดเริ่มต้น (main) ===== -->
     <script src="js/sound-fx.js"></script>
     <script src="js/music-player.js"></script>
     <script src="js/cursor-fx.js"></script>
+    <script src="js/memory-share.js"></script>
     <script src="js/warp-animation.js"></script>
     <script src="js/gallery-3d.js"></script>
     <script src="js/main.js"></script>

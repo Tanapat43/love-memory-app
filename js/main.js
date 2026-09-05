@@ -206,6 +206,7 @@ window.SpaceLove = window.SpaceLove || {};
 
     const shownPhotos = state.photos.slice(0, resolveDisplayCount());
     els.hero.hidden = true; // ซ่อนหน้าแรกทันทีที่กดสตาร์ท
+    document.body.classList.add('gallery-mode'); // โชว์ปุ่มแชร์/บันทึกการ์ด
 
     if (App.Sound) App.Sound.play('warp'); // เสียงวาร์ปความถี่ต่ำ
 
@@ -232,13 +233,37 @@ window.SpaceLove = window.SpaceLove || {};
     }
   }
 
+  // ผู้รับลิงก์แชร์: เปิดแกลเลอรีทันทีโดยไม่ต้องตั้งค่าใหม่
+  function openSharedMemories(photos) {
+    state.photos = photos;
+    els.hero.hidden = true;
+    document.body.classList.add('gallery-mode');
+    App.Gallery.build(photos);
+    App.Gallery.show();
+    if (App.MemoryShare) {
+      App.MemoryShare.markRecipientMode();
+      App.MemoryShare.toast('เปิดความทรงจำที่ได้รับแชร์แล้ว ✨', 3200);
+    }
+  }
+
   function init() {
     if (App.Sound) App.Sound.init();
     if (App.Music) App.Music.init();
     if (App.CursorFX) App.CursorFX.init();
+    if (App.MemoryShare) App.MemoryShare.init();
     createStars(els.starsBg, 150);
     createStars(els.warpOverlay, 90); // ดาวฉากหลังบน overlay วาร์ป
     createStardust();
+
+    // มาจากลิงก์แชร์ -> เปิดแกลเลอรีให้ผู้รับดูทันที
+    const sharedPhotos = App.MemoryShare
+      ? App.MemoryShare.readFromUrl()
+      : null;
+    if (sharedPhotos && sharedPhotos.length > 0) {
+      openSharedMemories(sharedPhotos);
+      return;
+    }
+
     loadPhotosFromStorage();
     bindEvents();
     console.log('Space Love Story ready! ✨');

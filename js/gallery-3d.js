@@ -577,11 +577,20 @@ window.SpaceLove = window.SpaceLove || {};
     });
   }
 
+  // รายการรูปปัจจุบันในแกลเลอรี (ใช้ตอนแชร์ลิงก์/ส่งออกการ์ด)
+  function getPhotos() {
+    return carousel.cards.map((card) => {
+      const img = card.querySelector('.card-photo img');
+      return img ? img.src : '';
+    });
+  }
+
   App.Gallery = {
     build: build,
     show: show,
     goTo: goTo,
     next: next,
     prev: prev,
+    getPhotos: getPhotos,
   };
 })(window.SpaceLove);
